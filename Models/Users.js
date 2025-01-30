@@ -26,7 +26,9 @@ class UserModel {
         gstIn,
         referralId,
         createdAt,
-        updatedAt
+        updatedAt,
+        canLogin,
+        address
     ) {
         this._id = _id;
         this.fullName = fullName;
@@ -55,6 +57,8 @@ class UserModel {
         this.referralId = referralId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.canLogin = canLogin;
+        this.address = address
     }
 
     fromJson(jsonData) {
@@ -85,7 +89,9 @@ class UserModel {
             jsonData.gstIn ?? 0,
             jsonData.referralId ?? "",
             jsonData.createdAt ?? new Date(),
-            jsonData.updatedAt ?? new Date()
+            jsonData.updatedAt ?? new Date(),
+            jsonData.canLogin ?? false,
+            jsonData.address ?? ""
         );
     }
 
@@ -120,6 +126,8 @@ class UserModel {
             referralId: this.referralId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            canLogin: this.canLogin,
+            address: this.address
         };
     }
 
@@ -150,6 +158,8 @@ class UserModel {
             referralId: this.referralId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            canLogin: this.canLogin,
+            address: this.address
         };
     }
 
@@ -169,12 +179,13 @@ class UserModel {
             wallet: e.wallet,
             referralId: e.referralId,
             createdAt: e.createdAt,
+            canLogin: e.canLogin,
+            address: e.address
         };
     }
 
     toUpdateJson(body) {
         const updateJson = {};
-
         for (const key in body) {
             if (key !== "id" && this.hasOwnProperty(key) && body[key] !== undefined && body[key] !== "") {
                 let value = body[key];

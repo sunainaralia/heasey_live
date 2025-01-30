@@ -1,5 +1,5 @@
 import { generateReferralKey, isRefferalKeyUnique } from "../Utils/referral.js";
-
+import { transponder, sendMail } from "../Utils/Mailer.js";
 import {
   InvalidId,
   accActivatedSub,
@@ -37,7 +37,7 @@ import Auth from "../Utils/Middlewares.js";
 // Models
 const userModel = new UserModel();
 const settings = new Settings();
-const Authenication=new Auth();
+const Authenication = new Auth();
 class Admin {
   constructor() {
   }
@@ -46,7 +46,7 @@ class Admin {
     let skip = parseInt(page) * limit;
     try {
       const users = await collections
-        .adminCollection()
+        .admins()
         .find({ id: { $ne: id }, type: { $ne: "super-admin" } })
         .skip(skip)
         .limit(limit)
@@ -68,19 +68,20 @@ class Admin {
   // Complete login controller
   async login(req, res) {
     try {
-      const { email, password } = req.body;
-      const result = await collections.adminCollection().findOne({
-        email: email.toLowerCase()
+      const { userId, password } = req.body;
+      const result = await collections.admins().findOne({
+        $or: [
+          { email: userId.toLowerCase() },
+          { phone: userId }
+        ]
       });
-
-      if (result && (result.email === email)) {
+      if (result && (result.email === userId || result.phone === userId)) {
         if (result.attempt > 0) {
-          const comparedPassword = await ComparePassword(password, result.password);
-          console.log(comparedPassword)
+          const comparedPassword = await new Auth().ComparePassword(password, result.password);
           if (comparedPassword) {
             if (result.attempt < 5) {
-              await collections.adminCollection().updateOne(
-                { id: result.id },
+              await collections.admins().updateOne(
+                { id: result._id },
                 { $set: { attempt: 5 } }
               );
             }
@@ -88,11 +89,11 @@ class Admin {
             return res.status(loggedIn.status || 200).send({
               ...loggedIn,
               type: result.type,
-              data: { id: result.id, token: token }
+              data: { userId: result._id, token: token }
             });
           } else {
-            await collections.adminCollection().updateOne(
-              { id: result.id },
+            await collections.admins().updateOne(
+              { id: result._id },
               { $inc: { attempt: -1 } }
             );
             return res.status(invalidLoginCred().status).send({
@@ -115,12 +116,12 @@ class Admin {
   // Static new user controller
   async addUser(user) {
     let referralKey = generateReferralKey();
-    while (!await isReferralKeyUnique(referralKey)) {
+    while (!await isRefferalKeyUnique(referralKey)) {
       referralKey = generateReferralKey(); // Keep generating until it's unique
     }
-    user.referral_key = referralKey; // Set the referral_key on the user
+    user.referralId = referralKey; // Set the referralId on the user
 
-    const res = await collections.adminCollection().insertOne(user);
+    const res = await collections.admins().insertOne(user);
     if (res.acknowledged && res.insertedId) {
       // Send email to the new user
       let mailOption = options(
@@ -137,7 +138,7 @@ class Admin {
         ...message,
         data: {
           id: user.id,
-          referral_key: user.referral_key
+          referralId: user.referralId
         },
       };
     } else {
@@ -147,15 +148,17 @@ class Admin {
 
   async registerAdmin(body) {
     try {
-      // Use AdminModel instead of UserModel
-      const user = UserModel.fromJson(body);
-
-      // Generate referral_key and ensure it's unique
+      const user = new UserModel().fromJson(body);
+      if (user?.type == "super-admin") {
+        user.status = true
+        user.isVerified = true
+      };
+      // Generate referralId and ensure it's unique
       let referralKey = generateReferralKey();
       while (!await isRefferalKeyUnique(referralKey)) {
         referralKey = generateReferralKey();
       }
-      user.referral_key = referralKey;
+      user.referralId = referralKey;
       const hashedPassword = await Authenication.hashPassword(user.password);
       user.password = hashedPassword;
 
@@ -163,20 +166,12 @@ class Admin {
 
       if (result.acknowledged && result.insertedId) {
         user.id = result.insertedId.toString();
-        let mailOption = options(
-          user.email,
-          `Welcome to Heasey!`,
-          accountCreated(user.id, user.fullName)
-        );
-        // await transponder.verify();
-        // await sendMail(mailOption);
-
         let message = registered(user?.id, user?.email);
         return {
           ...message,
           data: {
             id: user.id,
-            referral_key: user.referral_key
+            referralId: user.referralId
           },
         };
       } else {
@@ -192,7 +187,7 @@ class Admin {
   async activate(id) {
     try {
       const user = await collections
-        .adminCollection()
+        .admins()
         .findOneAndUpdate(
           { id: id },
           { $set: { isVerified: true, status: true } },
@@ -218,38 +213,27 @@ class Admin {
   async sendOtp(id) {
     try {
       let value = id.toLowerCase();
-      let query = {
-        $or: [{ email: value }]
-      };
-
-      // Check if the id is a valid ObjectId
-      if (value.match(/^[0-9a-fA-F]{24}$/)) {
-        query.$or.push({ _id: new ObjectId(value) });
-      }
-
-      const result = await collections.adminCollection().findOne(query);
-
-      if (result) {
+      const result = await collections.admins().findOne({
+        $or: [{ id: value }, { email: value }]
+      });
+      if ((result && result.id == value) || (result && result.email.toLowerCase() == value)) {
         if (result.attempt == 0) {
           return limitCrossed;
         }
-
         const { email, phone, fullName, _id } = result;
-
         function generateOTP() {
+          // Generate a random 6-digit number
           const otp = Math.floor(100000 + Math.random() * 900000);
-          return otp.toString();
+          return otp.toString(); // Convert to string
         }
 
         let otp = generateOTP();
         console.log(otp);
-
         await collections.veriCollection().insertOne({
           otp: otp,
-          id: _id.toString(), // Convert ObjectId to string
+          id: id,
           createdAt: new Date(),
         });
-
         await collections.veriCollection().createIndex(
           {
             createdAt: 1,
@@ -262,13 +246,11 @@ class Admin {
         let mailOption = options(
           email,
           otpSentSub,
-          loginOtp(_id.toString(), otp, fullName)
+          loginOtp(_id, otp, fullName)
         );
-
         await transponder.verify();
         await sendMail(mailOption);
-
-        return { ...otpSent, data: { id: _id.toString() } };
+        return { ...otpSent, data: { id: id } };
       } else {
         return InvalidId("user");
       }
@@ -287,10 +269,11 @@ class Admin {
         otp: otp,
       });
 
-      if (verify && (verify.id === req.body?.id || verify.id === req.body?.email)) {
-        const result = await collections.adminCollection().findOne({
+      if (verify && (verify.id === req.body?.userId.toString())) {
+        const result = await collections.admins().findOne({
           $or: [{ id: verify.id }, { email: verify.id }],
         });
+
 
         let user = new UserModel().fromJson(result);
         const token = jwt.sign(
@@ -337,8 +320,8 @@ class Admin {
   async getUserById(id) {
     try {
       const [user, countUsers, countConn, totalStorageResult, withdrawTransactionCount] = await Promise.all([
-        collections.adminCollection().find({ id: id }).toArray(),
-        collections.userCollection().countDocuments({ status: true }),
+        collections.admins().find({ id: id }).toArray(),
+        collections.users().countDocuments({ status: true }),
         collections.connCollection().countDocuments({ status: true }),
         collections.connCollection().aggregate([
           { $match: { status: true } },
@@ -379,7 +362,7 @@ class Admin {
   async forgetPass(id, password) {
     try {
       let value = id.toLowerCase();
-      const result = await collections.adminCollection().findOne({ $or: [{ id: value }, { email: value }] });
+      const result = await collections.admins().findOne({ $or: [{ id: value }, { email: value }] });
       if (result && result?.isVerified) {
         const hashedPassword = await HashPassword(password);
         const { email, fullName } = result;
@@ -426,7 +409,7 @@ class Admin {
       const { id } = body;
       const user = new UserModel().toUpdateJson(body);
 
-      const result = await collections.adminCollection().updateOne(
+      const result = await collections.admins().updateOne(
         { id: id },
         { $set: { ...user } }
       );
@@ -448,7 +431,7 @@ class Admin {
         type: photo?.mimetype ?? "",
         file: photo?.buffer?.toString("base64") ?? "",
       };
-      const result = await collections.adminCollection().updateOne(
+      const result = await collections.admins().updateOne(
         {
           id: id,
         },
@@ -479,7 +462,7 @@ class Admin {
 
       if (result && result?.id === id) {
         let value = id.toLowerCase();
-        const setResult = await collections.adminCollection().updateOne(
+        const setResult = await collections.admins().updateOne(
           { $or: [{ id: value }, { email: value }] },
           {
             $set: {
@@ -506,7 +489,7 @@ class Admin {
   //   Delete Admin controller
   async deleteUsers(id) {
     try {
-      const result = await collections.adminCollection().deleteOne({
+      const result = await collections.admins().deleteOne({
         id: id,
       });
       if (result && result.deletedCount > 0) {

@@ -75,4 +75,8 @@ export const reqFields = {
         "country",
         "postalCode",
     ],
+    admin: [
+        "initial", "fullName", "password", "email", "phone", "type"
+    ],
+    settings: ["title", "type", "value", "adminId"],
 };

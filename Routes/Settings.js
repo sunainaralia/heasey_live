@@ -1,7 +1,7 @@
 import express from "express";
 import Auth from "../Utils/Middlewares.js";
 import { serverError } from "../Utils/Messages.js";
-import { requiredFields } from "../Utils/Messages.js";
+import { reqFields } from "../Utils/RequiredFields.js";
 import multer from "multer";
 import collections from "../Utils/Collection.js";
 import Settings from "../Controllers/Settings.js"

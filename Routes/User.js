@@ -121,25 +121,25 @@ routes.post(
 // );
 
 // // Get User by user Id API
-// routes.get(
-//   "/get-user-by-id/",
-//   authentication.verifyToken,
-//   async (req, res) => {
-//     try {
-//       let userId = req.headers?.userid ?? req.headers?.userId;
-//       if (req.query && req.query.hasOwnProperty("userId") && req.query?.userId) {
-//         userId = req.query?.userId;
-//       }
-//       const result = await users.getUserById(userId);
-//       res.status(result.status).send(result);
-//     } catch (error) {
-//       res.status(serverError.status).send({
-//         ...serverError,
-//         error,
-//       });
-//     }
-//   }
-// );
+routes.get(
+    "/get-user-by-id/",
+    authentication.verifyToken,
+    async (req, res) => {
+        try {
+            let userId = req.headers?.userid ?? req.headers?.userId;
+            if (req.query && req.query.hasOwnProperty("userId") && req.query?.userId) {
+                userId = req.query?.userId;
+            }
+            const result = await users.getUserById(userId);
+            res.status(result.status).send(result);
+        } catch (error) {
+            res.status(serverError.status).send({
+                ...serverError,
+                error,
+            });
+        }
+    }
+);
 
 routes.post(
     "/send-otp",

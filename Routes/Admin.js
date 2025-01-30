@@ -33,7 +33,7 @@ routes.get(
 routes.post(
   "/admin-login",
   upload.none(),
-  authMiddleware.checkFields(["email", "password"]),
+  authMiddleware.checkFields(["userId", "password"]),
   authMiddleware.checkPassword,
   adminController.login
 );

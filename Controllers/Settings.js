@@ -24,7 +24,7 @@ class Settings {
     let skip = parseInt(page) * limit;
     try {
       const result = await collections
-        .settingsCollection()
+        .settings()
         .find({})
         .skip(skip)
         .limit(limit)
@@ -49,11 +49,10 @@ class Settings {
 
   // Create new Settings controller
   async createSettings(body) {
-    const settings = settings.fromJson(body);
-
+    const settings = SettingsModel.fromJson(body);
     try {
       const result = await collections
-        .settingsCollection()
+        .settings()
         .insertOne(settings.toDatabaseJson());
       if (result && result.insertedId) {
         return {
@@ -76,7 +75,7 @@ class Settings {
   // Get Settings by id controller
   async getSettingsById(id) {
     try {
-      const result = await collections.settingsCollection().findOne({
+      const result = await collections.settings().findOne({
         _id: new ObjectId(id),
       });
       if (result) {
@@ -101,7 +100,7 @@ class Settings {
       const { id } = body;
       const add = settings.toUpdateJson(body);
 
-      const result = await collections.settingsCollection().updateOne(
+      const result = await collections.settings().updateOne(
         {
           _id: new ObjectId(id),
         },
@@ -129,7 +128,7 @@ class Settings {
 
   async deleteSettingsById(id) {
     try {
-      const result = await collections.settingsCollection().deleteOne({
+      const result = await collections.settings().deleteOne({
         _id: new ObjectId(id),
       });
       if (result.deletedCount > 0) {
@@ -150,7 +149,7 @@ class Settings {
   async;
 
   async authSettings(type, status, session) {
-    const settings = await collections.settingsCollection().findOne({
+    const settings = await collections.settings().findOne({
       type: type,
       status: status,
     }, { session });
@@ -164,7 +163,7 @@ class Settings {
   async getSettingsByType(type) {
     try {
       const result = await collections
-        .settingsCollection()
+        .settings()
         .findOne({ $and: [{ type: type }, { status: true }] });
 
       if (result && result.status) {

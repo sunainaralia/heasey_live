@@ -13,9 +13,10 @@ class AdminModel {
     attempt,
     isVerified,
     designation,
-    referral_key,
+    referralId,
     createdAt,
     updatedAt,
+    canLogin
   ) {
     this.initial = initial;
     this.fullName = fullName;
@@ -30,9 +31,10 @@ class AdminModel {
     this.attempt = attempt;
     this.isVerified = isVerified;
     this.designation = designation;
-    this.referral_key = referral_key;
+    this.referralId = referralId;
     this.createdAt = createdAt;
     this.updatedAt = updatedAt;
+    this.canLogin = canLogin;
   }
 
   // Static method to create AdminModel from JSON data
@@ -51,9 +53,10 @@ class AdminModel {
       jsonData.attempt ?? 5,
       jsonData.isVerified !== undefined ? JSON.parse(jsonData.isVerified) : false,
       jsonData.designation ?? "",
-      jsonData.referral_key ?? "",
+      jsonData.referralId ?? "",
       jsonData.createdAt ? new Date(jsonData.createdAt) : new Date(),
-      jsonData.updatedAt ? new Date(jsonData.updatedAt) : new Date()
+      jsonData.updatedAt ? new Date(jsonData.updatedAt) : new Date(),
+      jsonData.canLogin ?? false
     );
   }
 
@@ -73,9 +76,10 @@ class AdminModel {
       attempt: this.attempt,
       isVerified: this.isVerified,
       designation: this.designation,
-      referral_key: this.referral_key,
+      referralId: this.referralId,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
+      canLogin: this.canLogin
     };
   }
 
@@ -94,9 +98,10 @@ class AdminModel {
       auth: this.auth,
       attempt: this.attempt,
       designation: this.designation,
-      referral_key: this.referral_key,
+      referralId: this.referralId,
       createdAt: this.createdAt,
-      updatedAt: this.updatedAt
+      updatedAt: this.updatedAt,
+      canLogin: this.canLogin
     };
   }
 

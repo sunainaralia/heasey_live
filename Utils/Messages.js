@@ -76,6 +76,12 @@ export const limitExceeded = (type) => {
         message: `You can't use this ${type} anymore. Limit Exceeded`
     }
 }
+export const limitedSuperAdmin = () => {
+    return {
+        status: 400,
+        message: `You are not authorized to register as super admin`
+    }
+}
 
 export const notMatched = {
     status: 400,
@@ -282,3 +288,10 @@ export const userActivated = {
     status: 200,
     message: `Account is activated Successfully!`,
 };
+export const unauthorizedLogin = (id) => {
+    return {
+        status: 400,
+        message: `please verify your ${id} firstly`
+    }
+};
+

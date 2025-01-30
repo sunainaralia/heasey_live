@@ -39,7 +39,9 @@ const collections = {
     // TDS Collection
     deduction: () => client.db(process.env.MONGO_DATABASE).collection("deduction"),
     // verification collection
-    verification: () => client.db(process.env.MONGO_DATABASE).collection("verification"),
+    veriCollection: () => client.db(process.env.MONGO_DATABASE).collection("verification"),
+    // settings collection
+    settingsCollection: () => client.db(process.env.MONGO_DATABASE).collection("settings"),
 }
 
 export default collections;

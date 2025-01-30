@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { alreadyExist, expired, invalidFormat, invalidId, limitExceeded, noAccess, notFound, notMatched, noToken, notVerified, requiredFields, serverError } from "./Messages.js";
+import { alreadyExist, expired, invalidFormat, invalidId, limitExceeded, noAccess, notFound, notMatched, noToken, notVerified, requiredFields, serverError, limitedSuperAdmin } from "./Messages.js";
 import jwt from "jsonwebtoken";
 import collections from "./Collection.js";
 import bcrypt from 'bcrypt';
@@ -38,26 +38,25 @@ class Auth {
     checkAuth = async (req, res, next) => {
         try {
             const userId =
-                req.headers?.userid ?? req.headers?.userId;
+                req.headers?.id ?? req.headers?.Id ?? req.headers.userId ?? req.headers.userid;
             if (userId !== null && userId !== undefined) {
                 // Source Admin types to check if user is valid auth
                 const source = await collections.settings().findOne({
                     type: "admin-types",
                 });
-
+                const user = await collections.admins().findOne({ _id: new ObjectId(userId) });
                 const adminType = source?.value ?? "";
-                const user = await collections.admins().findOne({
-                    userId: userId,
-                });
-
                 if (adminType.includes(user?.type)) {
                     return next();
                 } else {
-                    return res.status(noAccess.status).send(noAccess);
-                }
+                    if (user?.type === "super-admin") {
+                        return next();
+                    } else {
+                        return res.status(noAccess.status).send(noAccess);
+                    }
+                };
             } else {
-                let msg = notFound("User Id");
-                return res.status(msg.status).send(msg);
+                return res.status(idNotFound.status).send(idNotFound);
             }
         } catch (err) {
             console.log(err);
@@ -95,6 +94,7 @@ class Auth {
     adminExists = async (req, res, next) => {
         try {
             const { phone } = req.body;
+            const { type } = req.body;
             const email = req.body?.email.toLowerCase();
             // Check if user with the same email exists or having account more than 10 with the same number
             const countUser = await collections.admins().countDocuments({
@@ -111,6 +111,14 @@ class Auth {
             if (countMobile > 10) {
                 let msg = limitExceeded("mobile no");
                 return res.status(msg.status).send(msg);
+            }
+            const countSuperAdmin = await collections.admins().countDocuments({
+                type: type
+            });
+            if (countSuperAdmin > 0) {
+                let msg = limitedSuperAdmin()
+                return res.status(msg.status).send(msg)
+
             }
             return next();
         } catch (err) {
@@ -145,7 +153,7 @@ class Auth {
                 return res.status(noToken.status).send(noToken);
             }
             jwt.verify(token, process.env.JWT_SECRET, (err, decoded) => {
-                if (err || decoded?.userId !== userId) {
+                if (err || decoded?.id !== userId) {
                     return res.status(expired.status).send(expired);
                 }
                 return next();

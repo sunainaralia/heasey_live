@@ -20,7 +20,7 @@ class SettingsModel {
     }
 
     static fromJson(jsonData) {
-        return new Settings(
+        return new SettingsModel(
             jsonData._id ?? null,
             jsonData.adminId ?? "",
             jsonData.title ?? "",
@@ -59,7 +59,6 @@ class SettingsModel {
 
     toUpdateJson(body) {
         const updateJson = {};
-
         for (const key in body) {
             if (key !== "id" && this.hasOwnProperty(key) && body[key] !== null && body[key] !== undefined && body[key] !== "") {
                 let value = body[key];

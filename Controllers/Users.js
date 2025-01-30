@@ -1,7 +1,7 @@
 import collections from "../Utils/Collection.js";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated } from "../Utils/Messages.js";
+import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched } from "../Utils/Messages.js";
 import UserModel from "../Models/Users.js";
 import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
@@ -14,6 +14,7 @@ import jwt from "jsonwebtoken";
 import { sendMail, options } from "../Utils/Mailer.js";
 import fs from 'fs';
 import path from "path";
+import { readFile } from "../Utils/FileReader.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const notifications = new Notifications();
@@ -51,26 +52,27 @@ class Users {
   // send otp 
   async sendOtp(id) {
     try {
-      let value = id.toLowerCase();
-      let objectIdQuery = null;
-
-      if (ObjectId.isValid(value)) {
-        objectIdQuery = new ObjectId(value);
-      }
-
+      let value = id;
       const result = await collections.users().findOne({
-        $or: [{ _id: objectIdQuery }, { email: value }]
+        $or: [{ phone: value }, { email: value.toLowerCase() }]
       });
 
-      if (!result || (result._id != value && result.email.toLowerCase() != value)) {
+      if (!result || ((result.email.toLowerCase() != value) && (result.phone != value))) {
         return invalidId("user");
       }
 
-      const { email, fullName, _id } = result;
+      const { email, fullName, _id, canLogin, phone } = result;
+      if (!canLogin) {
+        if (email === value.toLowerCase()) {
+          return unauthorizedLogin("email")
+        } else if (phone === value) {
+          return unauthorizedLogin("phone")
+        }
+      }
       const otp = Math.floor(100000 + Math.random() * 900000).toString();
 
       // Store OTP in database
-      await collections.verification().insertOne({
+      await collections.veriCollection().insertOne({
         otp,
         userId: _id,
         status: true,
@@ -78,7 +80,7 @@ class Users {
       });
 
       // Create expiry index
-      await collections.verification().createIndex(
+      await collections.veriCollection().createIndex(
         { createdAt: 1 },
         { expireAfterSeconds: 60 * 5 }
       );
@@ -97,6 +99,7 @@ class Users {
       if (!emailResult.success) {
         throw new Error('Failed to send email');
       }
+      console.log(otp)
 
       return { ...otpSent, data: { userId: _id } };
 
@@ -110,7 +113,7 @@ class Users {
     try {
       let otp = req.body?.otp;
       let userId = req.body?.userId.toLowerCase();
-      const verify = await collections.verification().findOne({
+      const verify = await collections.veriCollection().findOne({
         otp: otp,
       });
       if (verify && verify.userId) {
@@ -126,7 +129,7 @@ class Users {
         if (user && user._id.toString() == verify.userId.toString()) {
           const token = jwt.sign(
             {
-              userId: user._id,
+              id: user._id,
             },
             process.env.JWT_SECRET,
             {
@@ -206,7 +209,7 @@ class Users {
       }
 
       // Generate a JWT token
-      const token = jwt.sign({ userId: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: '7d' });
+      const token = jwt.sign({ id: user._id.toString() }, process.env.JWT_SECRET, { expiresIn: '7d' });
 
       // Set cookies
       res.cookie('userId', user._id.toString(), {
@@ -300,7 +303,7 @@ class Users {
     const user = new UserModel().fromJson(body);
     try {
       const userTypeSettings = await collections.settings().findOne({
-        title: "user-types",
+        title: "users-types",
         status: true
       });
       if (!userTypeSettings) {
@@ -320,8 +323,7 @@ class Users {
       user.referralId = referralId;
       let sponsorId = user.sponsorId;
       if (sponsorId) {
-        console.log("yes")
-        let sponsorUser = await this.getSponsorInfo(sponsorId, "individual");
+        let sponsorUser = await this.getSponsorInfo(sponsorId, user.type);
         if (!sponsorUser || !sponsorUser.referralId) {
           sponsorUser = await this.getSponsorInfo(sponsorId, "admin");
           if (!sponsorUser || !sponsorUser.status) {
@@ -433,6 +435,47 @@ class Users {
       console.error("Error in updateUser:", err);
       const msg = serverError;
       return res.status(msg.status).send(msg);
+    }
+  }
+  // get user by id
+  async getUserById(id) {
+    try {
+      const value = id.toLowerCase();
+
+      // Use Promise.all to fetch all data in parallel
+      const [user, kyc, unread] = await Promise.all([
+        collections.users().findOne({ _id: new ObjectId(value) }),
+        // collections.notifCollection().countDocuments({ userId: value, status: false }),
+      ]);
+
+      if (user) {
+        const newUser = new UserModel().fromJson(user).toClientJson();
+        if(newUser.image){
+          newUser.image = readFile(user?.image) ?? "";
+        }
+        if (kyc) {
+          kyc.aadharFile = [
+            readFile(kyc?.aadharFile?.[0]) ?? "",
+            readFile(kyc?.aadharFile?.[1]) ?? "",
+          ];
+          kyc.panFile = readFile(kyc?.panFile);
+          kyc.sign = readFile(kyc?.sign) ?? "";
+        }
+
+        return {
+          ...fetched("Your"),
+          data: {
+            user: newUser,
+            kyc: kyc,
+            // unread: unread,
+          },
+        };
+      } else {
+        return idNotFound;
+      }
+    } catch (err) {
+      console.error(err);
+      return serverError;
     }
   }
 
