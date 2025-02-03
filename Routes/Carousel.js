@@ -3,20 +3,21 @@ import Auth from "../Utils/Middlewares.js";
 import { serverError } from "../Utils/Messages.js";
 import { reqFields } from "../Utils/RequiredFields.js";
 import multer from "multer";
-import Order from "../Controllers/Orders.js";
+import collections from "../Utils/Collection.js";
+import Carousel from "../Controllers/Carousel.js";
 
 const routes = express.Router();
 const upload = multer();
-const orderController = new Order();
+const carousel = new Carousel();
 const authController = new Auth();
 
-// Get All Orders with Pagination
-routes.get("/orders", authController.verifyToken, async (req, res) => {
+// Get All Carousels with Pagination
+routes.get("/carousels", authController.verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;
-    const orders = await orderController.getOrders(page, limit);
-    return res.status(orders.status).send(orders);
+    const carousels = await carousel.getCarousels(page, limit);
+    return res.status(carousels.status).send(carousels);
   } catch (error) {
     return res.status(serverError.status).send({
       ...serverError,
@@ -25,10 +26,10 @@ routes.get("/orders", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Get Order Count
-routes.get("/orders/count", authController.verifyToken, async (req, res) => {
+// Get Carousel Count
+routes.get("/carousels/count", authController.verifyToken, async (req, res) => {
   try {
-    const count = await collections.orders().countDocuments();
+    const count = await collections.carousels().countDocuments();
     res.status(200).send({ status: 200, count });
   } catch (error) {
     return res.status(serverError.status).send({
@@ -38,16 +39,16 @@ routes.get("/orders/count", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Create New Order
+// Create New Carousel
 routes.post(
-  "/orders",
+  "/carousels",
   upload.none(),
   authController.verifyToken,
   authController.checkAuth,
-  authController.checkFields(reqFields.order),
+  authController.checkFields(reqFields.carousel),
   async (req, res) => {
     try {
-      const result = await orderController.createOrder({ ...req.body });
+      const result = await carousel.createCarousel({ ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -58,14 +59,14 @@ routes.post(
   }
 );
 
-// Get Order by ID
+// Get Carousel by ID
 routes.get(
-  "/orders/:id",
+  "/carousels/:id",
   authController.verifyToken,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.getOrderById(req.params.id);
+      const result = await carousel.getCarouselById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -76,16 +77,16 @@ routes.get(
   }
 );
 
-// Update Order
+// Update Carousel
 routes.put(
-  "/orders/:id",
+  "/carousels/:id",
   upload.none(),
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.updateOrderById({ id: req.params.id, ...req.body });
+      const result = await carousel.updateCarouselById({ id: req.params.id, ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -96,15 +97,15 @@ routes.put(
   }
 );
 
-// Delete Order
+// Delete Carousel
 routes.delete(
-  "/orders/:id",
+  "/carousels/:id",
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.deleteOrderById(req.params.id);
+      const result = await carousel.deleteCarouselById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({

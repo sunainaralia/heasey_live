@@ -4,7 +4,6 @@ import jwt from "jsonwebtoken";
 import collections from "./Collection.js";
 import bcrypt from 'bcrypt';
 class Auth {
-
     // UserExist with user Id or not
     isValidUserId = async (req, res, next) => {
         let userId = req.body.userId ??
@@ -234,6 +233,10 @@ class Auth {
     ComparePassword = async (password, hashedPassword) => {
         return bcrypt.compare(password, hashedPassword);
     };
+    createOrderId=async()=>{
+        
+    }
+
 
 }
 

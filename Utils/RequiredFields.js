@@ -79,4 +79,39 @@ export const reqFields = {
         "initial", "fullName", "password", "email", "phone", "type"
     ],
     settings: ["title", "type", "value", "adminId"],
+    category: ["title", "icon", "description", "type"],
+    product: ["title", "description", "vendorId", "categoryId", "quantity", "sku"],
+    carousel: [
+        "title",
+        "path",
+        "link",
+        "route",
+        "type",
+        "size"
+    ],
+    review: ["userId", "review", "productId"],
+    order: [
+        "userId",
+        "title",
+        "productId",
+        "type",
+        "amount",
+        "discount",
+        "vendorId"
+    ],
+    reward: [
+        "range", "rule", "type", "title"
+    ],
+    coupon: ["title", "couponCode", "type", "status"],
+    query: ["userId", "subject", "description", "severity"],
+    reply: [
+        "reply",
+        "reviewId"
+    ],
+    feedback: [
+        "userId",
+        "data",
+        "type",
+        "description"
+    ]
 };

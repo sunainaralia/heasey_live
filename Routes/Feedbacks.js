@@ -3,20 +3,21 @@ import Auth from "../Utils/Middlewares.js";
 import { serverError } from "../Utils/Messages.js";
 import { reqFields } from "../Utils/RequiredFields.js";
 import multer from "multer";
-import Order from "../Controllers/Orders.js";
+import collections from "../Utils/Collection.js";
+import Feedbacks from "../Controllers/Feedbacks.js";
 
 const routes = express.Router();
 const upload = multer();
-const orderController = new Order();
+const feedbacks = new Feedbacks();
 const authController = new Auth();
 
-// Get All Orders with Pagination
-routes.get("/orders", authController.verifyToken, async (req, res) => {
+// Get All Feedbacks with Pagination
+routes.get("/feedbacks", authController.verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;
-    const orders = await orderController.getOrders(page, limit);
-    return res.status(orders.status).send(orders);
+    const feedbackList = await feedbacks.getFeedbacks(page, limit);
+    return res.status(feedbackList.status).send(feedbackList);
   } catch (error) {
     return res.status(serverError.status).send({
       ...serverError,
@@ -25,10 +26,23 @@ routes.get("/orders", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Get Order Count
-routes.get("/orders/count", authController.verifyToken, async (req, res) => {
+// Get Feedbacks by User ID
+routes.post("/feedbacks/user", authController.verifyToken, authController.checkFields(["userId"]), async (req, res) => {
   try {
-    const count = await collections.orders().countDocuments();
+    const result = await feedbacks.getFeedbacksByUserId(req.body.userId);
+    res.status(result.status).send(result);
+  } catch (error) {
+    return res.status(serverError.status).send({
+      ...serverError,
+      error,
+    });
+  }
+});
+
+// Get Feedback Count
+routes.get("/feedbacks/count", authController.verifyToken, async (req, res) => {
+  try {
+    const count = await collections.feedbacks().countDocuments();
     res.status(200).send({ status: 200, count });
   } catch (error) {
     return res.status(serverError.status).send({
@@ -38,16 +52,15 @@ routes.get("/orders/count", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Create New Order
+// Create New Feedback
 routes.post(
-  "/orders",
+  "/feedbacks",
   upload.none(),
   authController.verifyToken,
-  authController.checkAuth,
-  authController.checkFields(reqFields.order),
+  authController.checkFields(reqFields.feedback),
   async (req, res) => {
     try {
-      const result = await orderController.createOrder({ ...req.body });
+      const result = await feedbacks.createFeedback({ ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -58,14 +71,14 @@ routes.post(
   }
 );
 
-// Get Order by ID
+// Get Feedback by ID
 routes.get(
-  "/orders/:id",
+  "/feedbacks/:id",
   authController.verifyToken,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.getOrderById(req.params.id);
+      const result = await feedbacks.getFeedbackById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -76,16 +89,16 @@ routes.get(
   }
 );
 
-// Update Order
+// Update Feedback
 routes.put(
-  "/orders/:id",
+  "/feedbacks/:id",
   upload.none(),
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.updateOrderById({ id: req.params.id, ...req.body });
+      const result = await feedbacks.updateFeedbackById({ id: req.params.id, ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -96,15 +109,15 @@ routes.put(
   }
 );
 
-// Delete Order
+// Delete Feedback
 routes.delete(
-  "/orders/:id",
+  "/feedbacks/:id",
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await orderController.deleteOrderById(req.params.id);
+      const result = await feedbacks.deleteFeedbackById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({

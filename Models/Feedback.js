@@ -1,4 +1,4 @@
-class SessionModel {
+class FeedbackModel {
     constructor(
         id,
         userId,
@@ -22,14 +22,14 @@ class SessionModel {
     }
 
     fromJson(jsonData) {
-        return new SessionModel(
+        return new FeedbackModel(
             jsonData._id ?? null,
             jsonData.userId != undefined && jsonData.userId != null && !isNaN(parseInt(jsonData.userId)) ? parseInt(jsonData.userId) : jsonData.userId ?? 0,
             jsonData.data != undefined && jsonData.data != null && !isNaN(parseInt(jsonData.data)) ? parseFloat(jsonData.data) : jsonData.data ?? 0,
             jsonData.type ?? "lifetime",
             jsonData.status != undefined ? JSON.parse(jsonData.status) : false,
             jsonData.description ?? "",
-            jsonData.name != undefined && jsonData.name != null && !isNaN(parseInt(jsonData.name)) ? parseFloat(jsonData.name) : jsonData.name ?? 0,
+            jsonData.name != undefined && jsonData.name != null && !isNaN(parseInt(jsonData.name)) ? parseFloat(jsonData.name) : jsonData.name ?? "",
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date()
         );
@@ -75,4 +75,4 @@ class SessionModel {
     }
 }
 
-export default SessionModel;
+export default FeedbackModel;

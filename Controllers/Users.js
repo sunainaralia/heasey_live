@@ -30,8 +30,10 @@ class Users {
 
       if (users.length > 0) {
         users.forEach(user => {
-          user.image
-        })
+          if (user.image) {
+            user.image = readFile(user.image) ?? "";
+          }
+        });
         let message = found("Users");
         return {
           message,
@@ -40,7 +42,7 @@ class Users {
         };
       }
 
-      let message = notFound("Users")
+      let message = notFound("Users");
       return { message };
     } catch (err) {
       return {
@@ -365,7 +367,7 @@ class Users {
       }
     }
   }
-  // update user 
+  // update user image
   async changePhoto(id, photo) {
     try {
       const userFolder = path.join(__dirname, '../', 'uploads', id);

@@ -82,7 +82,6 @@ class KycModel {
 
     toUpdateJson(body) {
         const updateJson = {};
-
         for (const key in body) {
             if (key != "id" && this.hasOwnProperty(key) && body[key] !== null && body[key] !== undefined && body[key] !== "") {
                 let value = body[key];

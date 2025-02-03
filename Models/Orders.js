@@ -10,7 +10,8 @@ class OrdersModel {
         image,
         vendorId,
         createdAt,
-        updatedAt
+        updatedAt,
+        orderId
     ) {
         this.userId = userId;
         this.title = title;
@@ -23,6 +24,7 @@ class OrdersModel {
         this.vendorId = vendorId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.orderId = orderId
     }
 
     fromJson(jsonData) {
@@ -31,13 +33,14 @@ class OrdersModel {
             jsonData.title,
             jsonData.productId,
             jsonData.type,
-            jsonData.status,
+            jsonData.status??false,
             jsonData.amount,
             jsonData.discount,
             jsonData.image,
             jsonData.vendorId,
             jsonData.createdAt ?? new Date(),
-            jsonData.updatedAt ?? new Date()
+            jsonData.updatedAt ?? new Date(),
+            jsonData.orderId ?? ""
         );
     }
 
@@ -56,6 +59,7 @@ class OrdersModel {
             vendorId: this.vendorId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            orderId: this.orderId
         };
     }
 

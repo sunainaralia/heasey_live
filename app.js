@@ -4,6 +4,16 @@ import cookieParser from "cookie-parser";
 import usersRoutes from "./Routes/User.js";
 import adminRoutes from "./Routes/Admin.js";
 import settingsRoutes from "./Routes/Settings.js";
+import categoryRoutes from "./Routes/Category.js";
+import productRoutes from "./Routes/Products.js";
+import carouselRoutes from "./Routes/Carousel.js";
+import reviewRoutes from "./Routes/Reviews.js";
+import orderRoutes from "./Routes/Orders.js";
+import rewardRoutes from "./Routes/Rewards.js";
+import couponRoutes from "./Routes/Coupons.js";
+import queryRoutes from "./Routes/Query.js";
+import replyRoutes from "./Routes/Replies.js";
+import feedbackRoutes from "./Routes/Feedbacks.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import { urlNotFound } from "./Utils/Messages.js";
@@ -23,6 +33,17 @@ app.use("/api/v1/", usersRoutes);
 app.use("/api/v1/", adminRoutes);
 app.use("/api/v1/", adminRoutes);
 app.use("/api/v1", settingsRoutes);
+app.use("/api/v1/", categoryRoutes);
+app.use("/api/v1/", productRoutes);
+app.use("/api/v1/", carouselRoutes);
+app.use("/api/v1/", reviewRoutes);
+app.use("/api/v1/", orderRoutes);
+app.use("/api/v1/", rewardRoutes);
+app.use("/api/v1/", couponRoutes);
+app.use("/api/v1/", queryRoutes);
+app.use("/api/v1/", replyRoutes);
+app.use("/api/v1/", feedbackRoutes);
+
 // handling the error when no routes are found
 app.all("*", (req, res, next) => {
   res.status(404).send(urlNotFound);

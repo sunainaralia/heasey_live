@@ -11,7 +11,8 @@ class ProductsModel {
         sku,
         status,
         createdAt,
-        updatedAt
+        updatedAt,
+        price
     ) {
         this.id = id;
         this.title = title;
@@ -25,6 +26,7 @@ class ProductsModel {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.price = price
     }
 
     fromJson(jsonData) {
@@ -40,7 +42,8 @@ class ProductsModel {
             jsonData.sku ?? "",
             jsonData.status != null ? JSON.parse(jsonData.status) : false,
             jsonData.createdAt ?? new Date(),
-            jsonData.updatedAt ?? new Date()
+            jsonData.updatedAt ?? new Date(),
+            jsonData.price ?? 0
         );
     }
 
@@ -57,6 +60,7 @@ class ProductsModel {
             status: this.status,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            price: this.price
         };
     }
 

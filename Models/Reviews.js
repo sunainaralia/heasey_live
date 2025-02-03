@@ -8,7 +8,8 @@ class ReviewsModel {
         like,
         status,
         createdAt,
-        updatedAt
+        updatedAt,
+        rating
     ) {
         this.id = id;
         this.userId = userId;
@@ -19,6 +20,7 @@ class ReviewsModel {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
+        this.rating = rating
     }
 
     fromJson(jsonData) {
@@ -31,7 +33,8 @@ class ReviewsModel {
             jsonData.like ?? [],
             jsonData.status != null ? JSON.parse(jsonData.status) : true,
             jsonData.createdAt ?? new Date(),
-            jsonData.updatedAt ?? new Date()
+            jsonData.updatedAt ?? new Date(),
+            parseInt(jsonData.rating) ?? 0,
         );
     }
 
@@ -45,6 +48,7 @@ class ReviewsModel {
             status: this.status,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
+            rating: this.rating
         };
     }
 

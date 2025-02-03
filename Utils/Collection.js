@@ -42,6 +42,21 @@ const collections = {
     veriCollection: () => client.db(process.env.MONGO_DATABASE).collection("verification"),
     // settings collection
     settingsCollection: () => client.db(process.env.MONGO_DATABASE).collection("settings"),
+    // categories collection
+    categories: () => client.db(process.env.MONGO_DATABASE).collection("categories"),
+    // carousel collection
+    carousels: () => client.db(process.env.MONGO_DATABASE).collection("carousel"),
+    //reviews collection
+    reviews: () => client.db(process.env.MONGO_DATABASE).collection("reviews"),
+    // coupons collection
+    coupons: () => client.db(process.env.MONGO_DATABASE).collection("coupons"),
+    // queries collection
+    queries: () => client.db(process.env.MONGO_DATABASE).collection("queries"),
+    // replies collection
+    replies: () => client.db(process.env.MONGO_DATABASE).collection("replies"),
+    // feedbacks collection
+    feedbacks: () => client.db(process.env.MONGO_DATABASE).collection("feedbacks")
+
 }
 
 export default collections;
