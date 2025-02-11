@@ -294,4 +294,7 @@ export const unauthorizedLogin = (id) => {
         message: `please verify your ${id} firstly`
     }
 };
-
+export const updateCartFailed = { status: 500, message: "Failed to update cart" }
+export const failedToCreate = { status: 500, message: "Failed to create new cart collection" };
+export const updateProductQuantity = { status: 200, message: "Product quantity updated successfully" };
+export const productRemoved = { status: 200, message: "Product removed from cart" }

@@ -1,7 +1,7 @@
 import collections from "../Utils/Collection.js";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched } from "../Utils/Messages.js";
+import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound } from "../Utils/Messages.js";
 import UserModel from "../Models/Users.js";
 import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
@@ -19,7 +19,6 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const notifications = new Notifications();
 class Users {
-
   async getUsers(page, limit) {
     const skip = parseInt(page) * limit;
     try {
@@ -206,7 +205,6 @@ class Users {
 
       // Password is correct
       if (user.attempt < 5) {
-        // Reset the attempt counter to 5
         await collections.users().updateOne({ _id: user._id }, { $set: { attempt: 5 } });
       }
 
@@ -234,7 +232,8 @@ class Users {
             token: token,
             userId: user._id,
             member: true,
-            sponsorId: sponsorId
+            sponsorId: user.sponsorId,
+            referalId: user.referralId
           },
         });
       } else {
@@ -245,7 +244,8 @@ class Users {
             token: token,
             userId: user._id,
             member: false,
-            sponsorId: ""
+            sponsorId: "",
+            referalId: user.referralId
           },
         });
       }
@@ -349,7 +349,7 @@ class Users {
             return invalidId("Sponsor");
           }
           if (!placementUser?.status) {
-            return invalidId("Placementor");
+            return invalidId("Placement");
           }
         }
         let newPlacementLevel = Number(placementUser.level) + 1;
@@ -452,7 +452,7 @@ class Users {
 
       if (user) {
         const newUser = new UserModel().fromJson(user).toClientJson();
-        if(newUser.image){
+        if (newUser.image) {
           newUser.image = readFile(user?.image) ?? "";
         }
         if (kyc) {
@@ -478,6 +478,69 @@ class Users {
     } catch (err) {
       console.error(err);
       return serverError;
+    }
+  };
+  // Get User Members
+  async getMembers(userId) {
+    try {
+      const userObjectId = ObjectId.isValid(userId) ? new ObjectId(userId) : null;
+      if (!userObjectId) {
+        return invalidId("User");
+      }
+
+      // Find the user in the database
+      const user = await collections.users().findOne({ _id: userObjectId });
+      if (!user) {
+        return notFound("User");
+      }
+
+      // Fetch all team members using $graphLookup (recursively fetching referrals)
+      const members = await collections.users().aggregate([
+        {
+          $match: { _id: userObjectId }
+        },
+        {
+          $graphLookup: {
+            from: "users",
+            startWith: "$referralId",
+            connectFromField: "referralId",
+            connectToField: "sponsorId",
+            as: "teamMembers",
+            maxDepth: 1000,
+            depthField: "hierarchyLevel"
+          }
+        }
+      ]).toArray();
+
+      if (!members.length || !members[0]?.teamMembers) {
+        return notFound("TeamMembers");
+      }
+
+      let team = members[0]?.teamMembers || [];
+
+      // Update member count for the user
+      await collections.users().updateOne(
+        { _id: userObjectId },
+        { $set: { memberCount: team.length } }
+      );
+
+      // Format the response using the UserModel class
+      let users = team.map((e) => {
+        e.image = e.image ? readFile(e.image) : e.image;
+        return new UserModel().toMemberJson(e)
+      });
+      user.image = user.image ? readFile(user.image) : "";
+
+      return {
+        status: 200,
+        message: "Team members retrieved successfully",
+        data: [...users, user],
+        referralId: user.referralId
+      };
+
+    } catch (error) {
+      console.error("Error in getMembers:", error);
+      return serverError;;
     }
   }
 

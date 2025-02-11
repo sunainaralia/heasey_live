@@ -70,6 +70,20 @@ routes.post(
         }
     }
 );
+// Get User Members
+routes.get(
+    "/get-members",
+    authentication.verifyToken,
+    async (req, res) => {
+        try {
+            let userId = req.query?.userId ?? req.headers?.userid ?? req.headers?.userId;
+            const result = await users.getMembers(userId);
+            return res.status(result.status).send(result);
+        } catch (error) {
+            return res.status(serverError.status).send(serverError);
+        }
+    }
+);
 
 // // Activate connection and generate income
 // routes.post(
@@ -90,20 +104,7 @@ routes.post(
 //   }
 // );
 
-// // Get User Members
-// routes.get(
-//   "/get-members",
-//   authentication.verifyToken,
-//   async (req, res) => {
-//     try {
-//       let userId = req.query?.userId ?? req.headers?.userid ?? req.headers?.userId;
-//       const result = await users.getMembers(userId);
-//       return res.status(result.status).send(result);
-//     } catch (error) {
-//       return res.status(serverError.status).send(serverError);
-//     }
-//   }
-// );
+
 
 // // Forget Password API
 // routes.post(

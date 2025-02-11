@@ -233,8 +233,8 @@ class Auth {
     ComparePassword = async (password, hashedPassword) => {
         return bcrypt.compare(password, hashedPassword);
     };
-    createOrderId=async()=>{
-        
+    createOrderId = async () => {
+
     }
 
 

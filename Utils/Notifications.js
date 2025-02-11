@@ -78,7 +78,7 @@ export const unsuccessfulTransaction = (userId, transactionId) => {
 }
 
 export const newRef = (userId, referedId) => {
-  let res = NotificationModel.fromJson({
+  let res =new NotificationModel().fromJson({
     userId: userId,
     title: `Congratulations! you have successfully Reffered new Id.${userId}`,
     icon: "groupadd",

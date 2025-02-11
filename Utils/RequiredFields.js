@@ -113,5 +113,9 @@ export const reqFields = {
         "data",
         "type",
         "description"
+    ],
+    cart: [
+        "userId",
+        "products"
     ]
 };
