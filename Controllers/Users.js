@@ -65,7 +65,7 @@ class Users {
       const { email, fullName, _id, canLogin, phone } = result;
       if (!canLogin) {
         if (email === value.toLowerCase()) {
-          return unauthorizedLogin("email")
+          return ("email")
         } else if (phone === value) {
           return unauthorizedLogin("phone")
         }
