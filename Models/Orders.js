@@ -11,7 +11,8 @@ class OrdersModel {
         vendorId,
         createdAt,
         updatedAt,
-        orderId
+        orderId,
+        shippingFee
     ) {
         this.userId = userId;
         this.title = title;
@@ -24,7 +25,8 @@ class OrdersModel {
         this.vendorId = vendorId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.orderId = orderId
+        this.orderId = orderId;
+        this.shippingFee = shippingFee
     }
 
     fromJson(jsonData) {
@@ -33,14 +35,15 @@ class OrdersModel {
             jsonData.title,
             jsonData.productId,
             jsonData.type,
-            jsonData.status??false,
+            jsonData.status ?? false,
             jsonData.amount,
             jsonData.discount,
             jsonData.image,
             jsonData.vendorId,
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
-            jsonData.orderId ?? ""
+            jsonData.orderId ?? "",
+            jsonData.shippingFee ?? 0
         );
     }
 
@@ -59,7 +62,8 @@ class OrdersModel {
             vendorId: this.vendorId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            orderId: this.orderId
+            orderId: this.orderId,
+            shippingFee: this.shippingFee
         };
     }
 

@@ -12,7 +12,7 @@ const products = new Products();
 const authController = new Auth();
 
 // Get All Products with Pagination
-routes.get("/products", authController.verifyToken, async (req, res) => {
+routes.get("/products",  async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;

@@ -28,7 +28,8 @@ class UserModel {
         createdAt,
         updatedAt,
         canLogin,
-        address
+        address,
+        likedProducts
     ) {
         this._id = _id;
         this.fullName = fullName;
@@ -58,7 +59,8 @@ class UserModel {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.canLogin = canLogin;
-        this.address = address
+        this.address = address;
+        this.likedProducts = likedProducts
     }
 
     fromJson(jsonData) {
@@ -91,7 +93,8 @@ class UserModel {
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
             jsonData.canLogin ?? false,
-            jsonData.address ?? ""
+            jsonData.address ?? "",
+            jsonData.likedProducts??[]
         );
     }
 
@@ -127,7 +130,8 @@ class UserModel {
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             canLogin: this.canLogin,
-            address: this.address
+            address: this.address,
+            likedProducts: this.likedProducts
         };
     }
 
@@ -159,7 +163,8 @@ class UserModel {
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             canLogin: this.canLogin,
-            address: this.address
+            address: this.address,
+            likedProducts: this.likedProducts
         };
     }
 
@@ -180,7 +185,8 @@ class UserModel {
             referralId: e.referralId,
             createdAt: e.createdAt,
             canLogin: e.canLogin,
-            address: e.address
+            address: e.address,
+            likedProducts: e.likedProducts
         };
     }
 

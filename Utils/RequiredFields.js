@@ -5,7 +5,7 @@ export const reqFields = {
         "password",
         "email",
         "dob",
-        "type"
+        "phone"
     ],
 
     // Transactions Fields

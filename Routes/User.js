@@ -41,7 +41,6 @@ routes.post(
     }
 );
 
-
 // User Login with OTP
 routes.post(
     "/verify-otp",
@@ -85,7 +84,7 @@ routes.get(
     }
 );
 
-// // Activate connection and generate income
+// Activate connection and generate income
 // routes.post(
 //   "/activate-connection",
 //   upload.none(),

@@ -65,7 +65,7 @@ class Users {
       const { email, fullName, _id, canLogin, phone } = result;
       if (!canLogin) {
         if (email === value.toLowerCase()) {
-          return ("email")
+          return unauthorizedLogin("email")
         } else if (phone === value) {
           return unauthorizedLogin("phone")
         }
@@ -85,7 +85,6 @@ class Users {
         { createdAt: 1 },
         { expireAfterSeconds: 60 * 5 }
       );
-
       const mailOption = options(
         email,
         "Your Heasey OTP",
@@ -96,9 +95,13 @@ class Users {
              Heasey(Health made easy)`
       );
 
+
       const emailResult = await sendMail(mailOption);
       if (!emailResult.success) {
-        throw new Error('Failed to send email');
+        return {
+          status: 400,
+          message: "email not sent"
+        }
       }
       console.log(otp)
 
@@ -313,9 +316,11 @@ class Users {
       }
       const settingModel = settingsModel.fromJson(userTypeSettings);
       const allowedUserType = settingModel.value.split(',').map(type => type.trim());
-      if (!allowedUserType.includes(user.type)) {
-        return unauthorized;
-      };
+      if (user.type != null) {
+        if (!allowedUserType.includes(user.type)) {
+          return unauthorized;
+        };
+      }
       const hashedPassword = new Auth().hashPassword(user.password);
       user.password = await hashedPassword;
       let referralId = generateReferralKey();
@@ -541,6 +546,51 @@ class Users {
     } catch (error) {
       console.error("Error in getMembers:", error);
       return serverError;;
+    }
+  }
+  // change password
+  async changePassword(body) {
+    try {
+      const { oldPassword, password, userId } = body;
+      let value = userId.toLowerCase();
+
+      // First, fetch the user to verify old password
+      const existingUser = await collections.users().findOne({
+        $or: [{ userId: value }, { email: value }]
+      });
+
+      if (!existingUser) {
+        return notExist("User");
+      }
+
+      // Verify old password
+      const isOldPasswordValid = await bcrypt.compare(oldPassword, existingUser.password);
+
+      if (!isOldPasswordValid) {
+        return { success: false, message: "Current password is incorrect" };
+      }
+
+      // Hash the new password
+      const hashedPassword = await bcrypt.hash(password, 10);
+
+      // Update with new password
+      const user = await collections.userCollection().findOneAndUpdate(
+        { $or: [{ userId: value }, { email: value }] },
+        {
+          $set: {
+            password: hashedPassword,
+          },
+        },
+        { returnDocument: "after" }
+      );
+
+      if (user && user.password) {
+        return passwordUpdated;
+      } else {
+        return failedToUpdate;
+      }
+    } catch (err) {
+      return serverError;
     }
   }
 
