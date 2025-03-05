@@ -294,6 +294,18 @@ export const unauthorizedLogin = (id) => {
         message: `please verify your ${id} firstly`
     }
 };
+export const passwordUpdated = {
+    status: 200,
+    message: "Your password has been updated successfully"
+}
+export const failedToUpdate = {
+    status: 401,
+    message: "Failed to update password. Please try again"
+}
+export const invalidCurrentPassword = {
+    status: 401,
+    message: "Current password is incorrect"
+}
 export const updateCartFailed = { status: 500, message: "Failed to update cart" }
 export const failedToCreate = { status: 500, message: "Failed to create new cart collection" };
 export const updateProductQuantity = { status: 200, message: "Product quantity updated successfully" };

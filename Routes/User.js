@@ -221,6 +221,22 @@ routes.put(
     }
 );
 
+routes.put(
+    "/change-password",
+    upload.none(),
+    authentication.verifyToken,
+    authentication.checkFields(["userId", "password", "confirmPassword", "oldPassword"]),
+    authentication.matchPassworrd,
+    authentication.checkPassword,
+    async (req, res) => {
+        try {
+            const result = await users.changePassword(req.body);
+            return res.status(result.status).send(result);
+        } catch (error) {
+            return res.status(serverError.status).send(serverError);
+        }
+    }
+);
 
 // routes.delete("/delete-user/:id", authentication.verifyToken, authentication.checkAuth, async (req, res) => {
 //   try {

@@ -208,7 +208,7 @@ class Auth {
             return res.status(notMatched.status).send(notMatched);
         }
     }
-
+ 
     // Check password pattern
     checkPassword = (req, res, next) => {
         const passwordPattern =

@@ -1,7 +1,7 @@
 import collections from "../Utils/Collection.js";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound } from "../Utils/Messages.js";
+import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound, invalidCurrentPassword, passwordUpdated, failedToUpdate } from "../Utils/Messages.js";
 import UserModel from "../Models/Users.js";
 import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
@@ -15,6 +15,7 @@ import { sendMail, options } from "../Utils/Mailer.js";
 import fs from 'fs';
 import path from "path";
 import { readFile } from "../Utils/FileReader.js";
+import bcrypt from 'bcrypt';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const notifications = new Notifications();
@@ -556,7 +557,7 @@ class Users {
 
       // First, fetch the user to verify old password
       const existingUser = await collections.users().findOne({
-        $or: [{ userId: value }, { email: value }]
+        $or: [{ _id: new ObjectId(value) }, { email: value }]
       });
 
       if (!existingUser) {
@@ -567,15 +568,15 @@ class Users {
       const isOldPasswordValid = await bcrypt.compare(oldPassword, existingUser.password);
 
       if (!isOldPasswordValid) {
-        return { success: false, message: "Current password is incorrect" };
+        return invalidCurrentPassword;
       }
 
       // Hash the new password
       const hashedPassword = await bcrypt.hash(password, 10);
 
       // Update with new password
-      const user = await collections.userCollection().findOneAndUpdate(
-        { $or: [{ userId: value }, { email: value }] },
+      const user = await collections.users().findOneAndUpdate(
+        { $or: [{ _id: new ObjectId(value) }, { email: value }] },
         {
           $set: {
             password: hashedPassword,
