@@ -309,4 +309,12 @@ export const invalidCurrentPassword = {
 export const updateCartFailed = { status: 500, message: "Failed to update cart" }
 export const failedToCreate = { status: 500, message: "Failed to create new cart collection" };
 export const updateProductQuantity = { status: 200, message: "Product quantity updated successfully" };
-export const productRemoved = { status: 200, message: "Product removed from cart" }
+export const productRemoved = { status: 200, message: "Product removed from cart" };
+export const productLiked = {
+    status: 200,
+    message: "Product liked successfully",
+}
+export const productDisliked = {
+    status: 200,
+    message: "Product disliked successfully",
+}

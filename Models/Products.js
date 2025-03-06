@@ -12,7 +12,9 @@ class ProductsModel {
         status,
         createdAt,
         updatedAt,
-        price
+        price,
+        reviews,
+        ratings
     ) {
         this.id = id;
         this.title = title;
@@ -26,7 +28,9 @@ class ProductsModel {
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.price = price
+        this.price = price;
+        this.reviews = reviews;
+        this.ratings = ratings;
     }
 
     fromJson(jsonData) {
@@ -43,7 +47,9 @@ class ProductsModel {
             jsonData.status != null ? JSON.parse(jsonData.status) : false,
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
-            jsonData.price ?? 0
+            jsonData.price ?? 0,
+            jsonData.reviews ?? [],
+            jsonData.ratings ?? []
         );
     }
 
@@ -60,7 +66,9 @@ class ProductsModel {
             status: this.status,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            price: this.price
+            price: this.price,
+            reviews: this.reviews,
+            ratings: this.ratings
         };
     }
 

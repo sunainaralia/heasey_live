@@ -1,7 +1,7 @@
 import collections from "../Utils/Collection.js";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound, invalidCurrentPassword, passwordUpdated, failedToUpdate } from "../Utils/Messages.js";
+import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound, invalidCurrentPassword, passwordUpdated, failedToUpdate, productLiked,limitCrossed } from "../Utils/Messages.js";
 import UserModel from "../Models/Users.js";
 import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
@@ -346,23 +346,6 @@ class Users {
       } else {
         user.level = 0
       }
-      let placementId = user.placementId
-      if (placementId) {
-        let placementUser = await this.getSponsorInfo(placementId, "individual");
-        if (!placementUser || !placementUser.referralId) {
-          placementUser = await this.getSponsorInfo(placementId, "admin");
-          if (!placementUser || !placementUser.status) {
-            return invalidId("Sponsor");
-          }
-          if (!placementUser?.status) {
-            return invalidId("Placement");
-          }
-        }
-        let newPlacementLevel = Number(placementUser.level) + 1;
-        user.placementLevel = newPlacementLevel;
-      } else {
-        user.placementLevel = 0
-      }
       let res = await this.addUser(user.toDatabaseJson());
       return res;
 
@@ -594,7 +577,7 @@ class Users {
       return serverError;
     }
   }
-
+ 
 }
 
 export default Users;

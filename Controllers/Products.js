@@ -10,6 +10,9 @@ import {
   tryAgain,
   deleted,
   notExist,
+  productLiked,
+  notFound,
+  productDisliked
 } from "../Utils/Messages.js";
 import ProductsModel from "../Models/Products.js";
 import collections from "../Utils/Collection.js";
@@ -160,6 +163,43 @@ class Products {
       return serverError;
     }
   }
+  // like products
+  async likeOrUnlikeProduct(req) {
+    try {
+      const userId = req.headers.userid || req.headers.userId;
+      const productId = req.params.id;
+      const user = await collections.users().findOne({ _id: new ObjectId(userId) });
+      if (!user) {
+        return notFound("User");
+      }
+      const product = await collections.products().findOne({ _id: new ObjectId(productId) });
+      if (!product) {
+        return notFound("Product");
+      }
+      const isLiked = user.likedProducts && user.likedProducts.some(id => id==productId);
+
+      const updateAction = isLiked
+        ? { $pull: { likedProducts: productId} } 
+        : { $addToSet: { likedProducts: productId } }; 
+
+      const updatedUser = await collections.users().findOneAndUpdate(
+        { _id: new ObjectId(userId) },
+        updateAction,
+        { returnDocument: "after" }
+      );
+
+      if (!updatedUser) {
+        return serverError;
+      }
+
+      return isLiked ? productDisliked : productLiked; 
+
+    } catch (err) {
+      console.log(err);
+      return serverError;
+    }
+  }
+
 };
 
 export default Products;

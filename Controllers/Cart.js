@@ -30,15 +30,12 @@ class Cart {
             createdAt: new Date(),
             updatedAt: new Date(),
           };
-
           const result = await collections.cart().insertOne(newCart);
-
           if (!result.insertedId) {
             return failedToCreate;
           }
         }
       }
-
       return columnUpdated("cart");
     } catch (error) {
       console.error("Error in addToCart:", error);

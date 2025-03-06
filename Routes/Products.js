@@ -110,4 +110,16 @@ routes.post("/products/images", upload.array("images", 5), authController.verify
     });
   }
 });
+// like product
+routes.put("/products/likes/:id", authController.verifyToken, async (req, res) => {
+  try {
+    const result = await products.likeOrUnlikeProduct(req);
+    res.status(result.status).send(result);
+  } catch (error) {
+    return res.status(serverError.status).send({
+      ...serverError,
+      error,
+    });
+  }
+});
 export default routes;

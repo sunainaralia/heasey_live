@@ -13,8 +13,6 @@ class UserModel {
         attempt,
         isVerified,
         sponsorId,
-        placementId,
-        placementLevel,
         level,
         leader,
         rewardId,
@@ -44,8 +42,6 @@ class UserModel {
         this.attempt = attempt;
         this.isVerified = isVerified;
         this.sponsorId = sponsorId;
-        this.placementId = placementId;
-        this.placementLevel = placementLevel;
         this.level = level;
         this.leader = leader;
         this.rewardId = rewardId;
@@ -78,8 +74,6 @@ class UserModel {
             jsonData.attempt != null ? parseInt(jsonData.attempt) : 5,
             jsonData?.isVerified != null ? JSON.parse(jsonData.isVerified) : false,
             jsonData.sponsorId ?? "",
-            jsonData.placementId ?? "",
-            jsonData.placementLevel != null ? parseInt(jsonData.placementLevel) : 0,
             jsonData.level != null ? parseInt(jsonData.level) : 0,
             jsonData.leader ?? false,
             jsonData.rewardId ?? [],
@@ -115,8 +109,6 @@ class UserModel {
             attempt: this.attempt,
             isVerified: this.isVerified,
             sponsorId: this.sponsorId,
-            placementId: this.placementId,
-            placementLevel: this.placementLevel,
             level: this.level,
             leader: this.leader,
             rewardId: this.rewardId,
@@ -150,8 +142,6 @@ class UserModel {
             type: this.type,
             attempt: this.attempt,
             sponsorId: this.sponsorId,
-            placementId: this.placementId,
-            placementLevel: this.placementLevel,
             level: this.level,
             leader: this.leader,
             rewardId: this.rewardId,
@@ -178,9 +168,7 @@ class UserModel {
             status: e.status,
             isVerified: e.isVerified,
             level: parseInt(e.level),
-            placementLevel: parseInt(e.placementLevel),
             sponsorId: e.sponsorId,
-            placementId: e.placementId,
             wallet: e.wallet,
             referralId: e.referralId,
             createdAt: e.createdAt,
