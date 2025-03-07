@@ -26,7 +26,33 @@ routes.get("/products", async (req, res) => {
     });
   }
 });
+// latest products 
+routes.get("/products/latest", async (req, res) => {
+  try {
+    const page = parseInt(req.query.page) || 0;
+    const limit = parseInt(req.query.limit) || 10;
 
+    let result = await products.getLatestProducts(page, limit);
+    return res.status(result.status).send(result);
+  } catch (error) {
+    console.error("Error fetching latest products:", error);
+    return res.status(serverError.status).send({
+      ...serverError,
+      error,
+    });
+  }
+});
+routes.get("/products/wishlist", authController.verifyToken, async (req, res) => {
+  try {
+    const result = await products.getwishlistProducts(req);
+    res.status(result.status).send(result);
+  } catch (error) {
+    return res.status(500).send({
+      message: "Server error",
+      error,
+    });
+  }
+});
 // Get Products by Category ID
 routes.get("/products/category/:categoryId", authController.verifyToken, async (req, res) => {
   try {
@@ -125,4 +151,7 @@ routes.put("/products/likes/:id", authController.verifyToken, async (req, res) =
     });
   }
 });
+
+
+
 export default routes;

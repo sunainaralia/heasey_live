@@ -199,6 +199,69 @@ class Products {
       return serverError;
     }
   }
+  // find latest products
+  async getLatestProducts(page, limit) {
+    const skip = parseInt(page) * limit;
+    const thirtyDaysAgo = new Date();
+    thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+    try {
+      let result = await collections
+        .products()
+        .find({ createdAt: { $gte: thirtyDaysAgo } }) 
+        .sort({ createdAt: -1 }) 
+        .skip(skip)
+        .limit(limit)
+        .toArray();
+
+      if (result.length > 0) {
+        result = await Promise.all(
+          result.map(async (product) => {
+            if (product.images && product.images.length > 0) {
+              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+            }
+            return product;
+          })
+        );
+        return { ...fetched("Latest Products"), data: result };
+      } else {
+        return tryAgain;
+      }
+    } catch (err) {
+      return { ...serverError, err };
+    }
+  }
+  // find popular products
+  async getPopularProducts(page, limit){
+
+  }
+  // wishlist product
+  async getwishlistProducts(req) {
+    try {
+      const userId = req.headers.userid || req.headers.userId;
+
+      if (!ObjectId.isValid(userId)) {
+        return { status: 400, message: "Invalid User ID" };
+      }
+      const user = await collections.users().findOne(
+        { _id: new ObjectId(userId) },
+        { projection: { likedProducts: 1 } } 
+      );
+
+      if (!user || !user.likedProducts || user.likedProducts.length === 0) {
+        return notFound("Liked products");
+      }
+      const likedProducts = await collections.products().find({
+        _id: { $in: user.likedProducts.map(id => new ObjectId(id)) }
+      }).toArray();
+
+      return { ...fetched("Liked products"), data: likedProducts };
+
+    } catch (err) {
+      console.error("Error fetching liked products:", err);
+      return { status: 500, message: "Internal Server Error", error: err };
+    }
+  }
+
 
 };
 
