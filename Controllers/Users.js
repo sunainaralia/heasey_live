@@ -1,7 +1,7 @@
 import collections from "../Utils/Collection.js";
 import { dirname } from 'path';
 import { fileURLToPath } from 'url';
-import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound, invalidCurrentPassword, passwordUpdated, failedToUpdate, productLiked,limitCrossed } from "../Utils/Messages.js";
+import { attemptLeft, found, invalidId, loggedIn, serverError, tryAgain, unauthorized, registered, invalidLoginCred, otpSent, invalidOtp, uploadError, columnUpdated, unauthorizedLogin, fetched, notFound, invalidCurrentPassword, passwordUpdated, failedToUpdate, productLiked, limitCrossed } from "../Utils/Messages.js";
 import UserModel from "../Models/Users.js";
 import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
@@ -577,7 +577,75 @@ class Users {
       return serverError;
     }
   }
- 
+  // verify otp and reset password
+  async resetPassword(req, res) {
+    try {
+      let userId = req.body?.userId.toLowerCase();
+      let newPassword = req.body?.newPassword;
+      let confirmPassword = req.body?.confirmPassword;
+
+      if (newPassword !== confirmPassword) {
+        return res.status(400).send({ status: 400, message: "Password and confirmPassword do not match. Try again." });
+      }
+
+      let objectIdQuery = null;
+      if (ObjectId.isValid(userId)) {
+        objectIdQuery = new ObjectId(userId);
+      }
+
+      const user = await collections.users().findOne({
+        $or: [{ _id: objectIdQuery }, { email: userId }]
+      });
+
+      if (!user) {
+        return res.status(notFound("User").status).send(notFound("User"));
+      }
+
+      // Hash the new password using bcrypt
+      const hashedPassword = await bcrypt.hash(newPassword, 10);
+
+      // Update the user's password in the database
+      await collections.users().updateOne(
+        { _id: user._id },
+        { $set: { password: hashedPassword } }
+      );
+
+      const token = jwt.sign(
+        { id: user._id },
+        process.env.JWT_SECRET,
+        { expiresIn: "1d" }
+      );
+
+      res.cookie("userId", user._id, {
+        httpOnly: true,
+        maxAge: 1 * 24 * 60 * 60 * 1000,
+        secure: true,
+        sameSite: "strict",
+      });
+
+      return res
+        .status(200)
+        .cookie("authToken", token, {
+          httpOnly: true,
+          maxAge: 1 * 24 * 60 * 60 * 1000,
+          secure: true,
+          sameSite: "strict",
+        })
+        .send({
+          status: 200,
+          message: "Password reset successfully",
+          data: {
+            token: token,
+            userId: user._id
+          },
+        });
+    } catch (err) {
+      console.error("Reset password error:", err);
+      return res.status(serverError.status).send(serverError);
+    }
+  }
+
+
 }
 
 export default Users;

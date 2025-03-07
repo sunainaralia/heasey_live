@@ -6,7 +6,6 @@ import { reqFields } from "../Utils/RequiredFields.js";
 // import ifsc from "ifsc";
 
 import { serverError } from "../Utils/Messages.js";
-// import { reqFields } from "../Utils/RequiredFields.js";
 
 const routes = express.Router();
 
@@ -140,7 +139,7 @@ routes.get(
         }
     }
 );
-
+// send otp
 routes.post(
     "/send-otp",
     upload.none(),
@@ -220,7 +219,7 @@ routes.put(
         }
     }
 );
-
+// change password
 routes.put(
     "/change-password",
     upload.none(),
@@ -237,15 +236,21 @@ routes.put(
         }
     }
 );
-
-// routes.delete("/delete-user/:id", authentication.verifyToken, authentication.checkAuth, async (req, res) => {
-//   try {
-//     const result = await users.deleteUsers(req?.params?.id);
-//     return res.status(result.status).send(result);
-//   } catch (err) {
-//     return res.status(serverError.status).send(serverError);
-//   }
-// });
+// delete user
+routes.delete("/delete-user/:id", authentication.verifyToken, authentication.checkAuth, async (req, res) => {
+    try {
+        const result = await users.deleteUsers(req?.params?.id);
+        return res.status(result.status).send(result);
+    } catch (err) {
+        return res.status(serverError.status).send(serverError);
+    }
+});
+// verify otp and reset password
+routes.put(
+    "/reset-password",
+    authentication.checkFields(["userId", "newPassword", "confirmPassword"]),
+    users.resetPassword
+);
 
 
 export default routes;
