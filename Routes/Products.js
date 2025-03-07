@@ -101,7 +101,7 @@ routes.delete("/products/:id", authController.verifyToken, async (req, res) => {
 // Upload Product Images
 routes.post("/products/images", upload.array("images", 5),
   authController.verifyToken,
-  // authController.checkAuth(),
+  authController.checkAuth,
   authController.checkFields(["id"]), async (req, res) => {
     try {
       const result = await products.changeProductImages(req.body.id, req.files);

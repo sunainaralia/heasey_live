@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { alreadyExist, expired, invalidFormat, invalidId, limitExceeded, noAccess, notFound, notMatched, noToken, notVerified, requiredFields, serverError, limitedSuperAdmin } from "./Messages.js";
+import { alreadyExist, expired, invalidFormat, invalidId, limitExceeded, noAccess, notFound, notMatched, noToken, notVerified, requiredFields, serverError, limitedSuperAdmin,} from "./Messages.js";
 import jwt from "jsonwebtoken";
 import collections from "./Collection.js";
 import bcrypt from 'bcrypt';
@@ -55,7 +55,7 @@ class Auth {
                     }
                 };
             } else {
-                return res.status(idNotFound.status).send(idNotFound);
+                return res.status(notFound("User").status).send(notFound("User"));
             }
         } catch (err) {
             console.log(err);
