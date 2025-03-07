@@ -12,7 +12,7 @@ const products = new Products();
 const authController = new Auth();
 
 // Get All Products with Pagination
-routes.get("/products",  async (req, res) => {
+routes.get("/products", async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;
@@ -99,17 +99,20 @@ routes.delete("/products/:id", authController.verifyToken, async (req, res) => {
   }
 });
 // Upload Product Images
-routes.post("/products/images", upload.array("images", 5), authController.verifyToken, authController.checkFields(["id"]), async (req, res) => {
-  try {
-    const result = await products.changeProductImages(req.body.id, req.files);
-    res.status(result.status).send(result);
-  } catch (error) {
-    return res.status(serverError.status).send({
-      ...serverError,
-      error,
-    });
-  }
-});
+routes.post("/products/images", upload.array("images", 5),
+  authController.verifyToken,
+  // authController.checkAuth(),
+  authController.checkFields(["id"]), async (req, res) => {
+    try {
+      const result = await products.changeProductImages(req.body.id, req.files);
+      res.status(result.status).send(result);
+    } catch (error) {
+      return res.status(serverError.status).send({
+        ...serverError,
+        error,
+      });
+    }
+  });
 // like product
 routes.put("/products/likes/:id", authController.verifyToken, async (req, res) => {
   try {
