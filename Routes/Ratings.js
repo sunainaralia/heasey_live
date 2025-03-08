@@ -4,20 +4,20 @@ import { serverError } from "../Utils/Messages.js";
 import { reqFields } from "../Utils/RequiredFields.js";
 import multer from "multer";
 import collections from "../Utils/Collection.js";
-import Reviews from "../Controllers/Reviews.js";
+import Ratings from "../Controllers/Ratings.js";
 
 const routes = express.Router();
 const upload = multer();
-const reviews = new Reviews();
+const ratings = new Ratings();
 const authController = new Auth();
 
-// Get All Reviews with Pagination
-routes.get("/reviews", authController.verifyToken, async (req, res) => {
+// Get All Ratings with Pagination
+routes.get("/ratings", authController.verifyToken, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;
-    const reviewList = await reviews.getReviews(page, limit);
-    return res.status(reviewList.status).send(reviewList);
+    const ratingList = await ratings.getRatings(page, limit);
+    return res.status(ratingList.status).send(ratingList);
   } catch (error) {
     return res.status(serverError.status).send({
       ...serverError,
@@ -26,10 +26,10 @@ routes.get("/reviews", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Get Reviews by Product ID from Request Body
-routes.post("/reviews/product", authController.verifyToken, authController.checkFields(["productId"]), async (req, res) => {
+// Get Ratings by Product ID from Request Body
+routes.post("/ratings/product", authController.verifyToken, authController.checkFields(["productId"]), async (req, res) => {
   try {
-    const result = await reviews.getReviewsByProductId(req.body.productId);
+    const result = await ratings.getRatingsByProductId(req.body.productId);
     res.status(result.status).send(result);
   } catch (error) {
     return res.status(serverError.status).send({
@@ -39,10 +39,10 @@ routes.post("/reviews/product", authController.verifyToken, authController.check
   }
 });
 
-// Get Review Count
-routes.get("/reviews/count", authController.verifyToken, async (req, res) => {
+// Get Rating Count
+routes.get("/ratings/count", authController.verifyToken, async (req, res) => {
   try {
-    const count = await collections.reviews().countDocuments();
+    const count = await collections.ratings().countDocuments();
     res.status(200).send({ status: 200, count });
   } catch (error) {
     return res.status(serverError.status).send({
@@ -52,13 +52,13 @@ routes.get("/reviews/count", authController.verifyToken, async (req, res) => {
   }
 });
 
-// Create New Review
+// Create New Rating
 routes.post(
-  "/reviews",
-  authController.checkFields(reqFields.review),
+  "/ratings",
+  authController.checkFields(reqFields.rating),
   async (req, res) => {
     try {
-      const result = await reviews.createReview({ ...req.body });
+      const result = await ratings.createRating({ ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -69,14 +69,14 @@ routes.post(
   }
 );
 
-// Get Review by ID
+// Get Rating by ID
 routes.get(
-  "/reviews/:id",
+  "/ratings/:id",
   authController.verifyToken,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await reviews.getReviewById(req.params.id);
+      const result = await ratings.getRatingById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -87,16 +87,16 @@ routes.get(
   }
 );
 
-// Update Review
+// Update Rating
 routes.put(
-  "/reviews/:id",
+  "/ratings/:id",
   upload.none(),
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await reviews.updateReviewById({ id: req.params.id, ...req.body });
+      const result = await ratings.updateRatingById({ id: req.params.id, ...req.body });
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({
@@ -107,33 +107,15 @@ routes.put(
   }
 );
 
-// add likes on review
-routes.put(
-  "/reviews/like/:id",
-  authController.verifyToken,
-  authController.CheckObjectId,
-  async (req, res) => {
-    try {
-      const result = await reviews.addLikeOnReview({ id: req.params.id, userId: req.headers.userId || req.headers.userid });
-      res.status(result.status).send(result);
-    } catch (error) {
-      return res.status(serverError.status).send({
-        ...serverError,
-        error,
-      });
-    }
-  }
-);
-
-// Delete Review
+// Delete Rating
 routes.delete(
-  "/reviews/:id",
+  "/ratings/:id",
   authController.verifyToken,
   authController.checkAuth,
   authController.CheckObjectId,
   async (req, res) => {
     try {
-      const result = await reviews.deleteReviewById(req.params.id);
+      const result = await ratings.deleteRatingById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
       return res.status(serverError.status).send({

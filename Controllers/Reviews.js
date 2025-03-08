@@ -8,6 +8,7 @@ import {
   tryAgain,
   deleted,
   notExist,
+  notFound,
 } from "../Utils/Messages.js";
 import ReviewsModel from "../Models/Reviews.js";
 import collections from "../Utils/Collection.js";
@@ -40,10 +41,31 @@ class Reviews {
   async createReview(body) {
     const review = reviewsModel.fromJson(body);
     try {
+      if (review.userId) {
+        const user = await collections.users().findOne({ _id: new ObjectId(review.userId) })
+        if (!user) {
+          return notFound("User")
+        }
+      }
       const result = await collections.reviews().insertOne(review.toDatabaseJson());
-      return result?.insertedId
-        ? { ...columnCreated("Review"), data: { id: result.insertedId } }
-        : tryAgain;
+      if (result?.insertedId) {
+        const productUpdateResult = await collections.products().findOneAndUpdate(
+          { _id: new ObjectId(review.productId) },
+          {
+            $addToSet: { reviews: result.insertedId }
+          },
+          { returnDocument: 'after' }
+        )
+        console.log(productUpdateResult)
+        if (productUpdateResult) {
+          return { ...columnCreated("Review"), data: { id: result.insertedId } };
+        } else {
+          return notFound("Product");
+        }
+      } else {
+        return tryAgain;
+      }
+
     } catch (err) {
       return { ...serverError, err };
     }
@@ -78,6 +100,36 @@ class Reviews {
       return { ...serverError, err };
     }
   }
+
+  //add like on review Review
+  async addLikeOnReview(body) {
+    try {
+      const { id, userId } = body;
+
+      const review = await collections.reviews().findOne({ _id: new ObjectId(id) });
+
+      if (!review) {
+        return InvalidId("Review");
+      }
+      const isLiked = review.likes && review.likes.includes(userId);
+
+      const updateQuery = isLiked
+        ? { $pull: { likes: userId } }
+        : { $addToSet: { likes: userId } };
+
+      const result = await collections.reviews().updateOne(
+        { _id: new ObjectId(id) },
+        updateQuery
+      );
+
+      return result.acknowledged && result.modifiedCount > 0
+        ? { ...columnUpdated("Review") }
+        : InvalidId("Review");
+    } catch (err) {
+      return { ...serverError, err };
+    }
+  }
+
 
   // Delete Review
   async deleteReviewById(id) {

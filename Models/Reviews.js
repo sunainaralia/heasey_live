@@ -5,22 +5,20 @@ class ReviewsModel {
         review,
         anonymous,
         productId,
-        like,
+        likes,
         status,
         createdAt,
-        updatedAt,
-        rating
+        updatedAt
     ) {
         this.id = id;
         this.userId = userId;
         this.review = review;
         this.anonymous = anonymous;
         this.productId = productId;
-        this.like = like;
+        this.like = likes;
         this.status = status;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
-        this.rating = rating
     }
 
     fromJson(jsonData) {
@@ -30,11 +28,10 @@ class ReviewsModel {
             jsonData.review ?? "",
             jsonData.anonymous ?? "",
             jsonData.productId ?? "",
-            jsonData.like ?? [],
+            jsonData.likes ?? [],
             jsonData.status != null ? JSON.parse(jsonData.status) : true,
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
-            parseInt(jsonData.rating) ?? 0,
         );
     }
 
@@ -44,11 +41,10 @@ class ReviewsModel {
             review: this.review,
             anonymous: this.anonymous,
             productId: this.productId,
-            like: this.like,
+            likes: this.like,
             status: this.status,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
-            rating: this.rating
         };
     }
 

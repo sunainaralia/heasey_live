@@ -88,7 +88,7 @@ class Products {
   // Get Product by ID
   async getProductById(id) {
     try {
-      const result = await collections.products().findOne({ _id: new ObjectId(id) });
+      const result = await collections.products().findOne({ _id:new ObjectId(id) });
       if (!result) {
         return InvalidId("Product Detail");
       }
@@ -99,7 +99,7 @@ class Products {
 
       return { ...fetched("Product"), data: result };
     } catch (err) {
-      return { ...serverError, err };
+      return { ...serverError };
     }
   }
 
@@ -176,11 +176,11 @@ class Products {
       if (!product) {
         return notFound("Product");
       }
-      const isLiked = user.likedProducts && user.likedProducts.some(id => id==productId);
+      const isLiked = user.likedProducts && user.likedProducts.some(id => id == productId);
 
       const updateAction = isLiked
-        ? { $pull: { likedProducts: productId} } 
-        : { $addToSet: { likedProducts: productId } }; 
+        ? { $pull: { likedProducts: productId } }
+        : { $addToSet: { likedProducts: productId } };
 
       const updatedUser = await collections.users().findOneAndUpdate(
         { _id: new ObjectId(userId) },
@@ -192,7 +192,7 @@ class Products {
         return serverError;
       }
 
-      return isLiked ? productDisliked : productLiked; 
+      return isLiked ? productDisliked : productLiked;
 
     } catch (err) {
       console.log(err);
@@ -205,24 +205,26 @@ class Products {
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
     try {
-      let result = await collections
-        .products()
-        .find({ createdAt: { $gte: thirtyDaysAgo } }) 
-        .sort({ createdAt: -1 }) 
+      let latestProducts = await collections.products()
+        .find({ createdAt: { $gte: thirtyDaysAgo } })
+        .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit)
+        .limit(limit).toArray();
+      let remainingProducts = await collections.products()
+        .find({ createdAt: { $lt: thirtyDaysAgo } })
+        .sort({ createdAt: -1 })
         .toArray();
-
-      if (result.length > 0) {
-        result = await Promise.all(
-          result.map(async (product) => {
-            if (product.images && product.images.length > 0) {
-              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
-            }
-            return product;
-          })
-        );
-        return { ...fetched("Latest Products"), data: result };
+      let allProducts = [...latestProducts, ...remainingProducts];
+      allProducts = await Promise.all(
+        allProducts.map(async (product) => {
+          if (product.images && product.images.length > 0) {
+            product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+          }
+          return product;
+        })
+      );
+      if (allProducts.length > 0) {
+        return { ...fetched("Latest Products"), data: allProducts };
       } else {
         return tryAgain;
       }
@@ -230,12 +232,51 @@ class Products {
       return { ...serverError, err };
     }
   }
-  // find popular products
-  async getPopularProducts(page, limit){
 
+  // find popular products
+  async getPopularProducts(req) {
+    try {
+      const orderedProducts = await collections.orders().distinct("productId");
+      let existingOrderedProducts = [];
+      let remainingProducts = [];
+
+      if (orderedProducts && orderedProducts.length > 0) {
+        existingOrderedProducts = await collections.products().find({
+          _id: { $in: orderedProducts.map(id => new ObjectId(id)) }
+        }).toArray();
+
+        remainingProducts = await collections.products().find({
+          _id: { $nin: orderedProducts.map(id => new ObjectId(id)) }
+        }).toArray();
+      } else {
+        remainingProducts = await collections.products().find({}).toArray();
+      }
+      let allProducts = [...existingOrderedProducts, ...remainingProducts];
+      allProducts = await Promise.all(
+        allProducts.map(async (product) => {
+          if (product.images && product.images.length > 0) {
+            try {
+              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+            } catch (err) {
+              console.error(`Error reading image ${imgPath}:`, err);
+              product.images = [];
+            }
+          }
+          return product;
+        })
+      );
+
+      return { status: 200, message: "Popular products retrieved", data: allProducts };
+
+    } catch (err) {
+      console.error("Error fetching popular products:", err);
+      return { status: 500, message: "Internal Server Error", error: err.toString() };
+    }
   }
+
+
   // wishlist product
-  async getwishlistProducts(req) {
+  async getWishlistProducts(req) {
     try {
       const userId = req.headers.userid || req.headers.userId;
 
@@ -244,23 +285,37 @@ class Products {
       }
       const user = await collections.users().findOne(
         { _id: new ObjectId(userId) },
-        { projection: { likedProducts: 1 } } 
+        { projection: { likedProducts: 1 } }
       );
 
       if (!user || !user.likedProducts || user.likedProducts.length === 0) {
         return notFound("Liked products");
       }
-      const likedProducts = await collections.products().find({
+      let likedProducts = await collections.products().find({
         _id: { $in: user.likedProducts.map(id => new ObjectId(id)) }
       }).toArray();
+      likedProducts = await Promise.all(
+        likedProducts.map(async (product) => {
+          if (product.images && product.images.length > 0) {
+            try {
+              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+            } catch (err) {
+              console.error(`Error reading image ${imgPath}:`, err);
+              product.images = [];
+            }
+          }
+          return product;
+        })
+      );
 
-      return { ...fetched("Liked products"), data: likedProducts };
+      return { status: 200, message: "Liked products retrieved", data: likedProducts };
 
     } catch (err) {
       console.error("Error fetching liked products:", err);
-      return { status: 500, message: "Internal Server Error", error: err };
+      return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
+
 
 
 };

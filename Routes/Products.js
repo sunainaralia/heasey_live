@@ -42,9 +42,10 @@ routes.get("/products/latest", async (req, res) => {
     });
   }
 });
+// liked whishlist products
 routes.get("/products/wishlist", authController.verifyToken, async (req, res) => {
   try {
-    const result = await products.getwishlistProducts(req);
+    const result = await products.getWishlistProducts(req);
     res.status(result.status).send(result);
   } catch (error) {
     return res.status(500).send({
@@ -53,6 +54,19 @@ routes.get("/products/wishlist", authController.verifyToken, async (req, res) =>
     });
   }
 });
+// popular products
+routes.get("/products/popular", async (req, res) => {
+  try {
+    const result = await products.getPopularProducts(req);
+    res.status(result.status).send(result);
+  } catch (error) {
+    return res.status(500).send({
+      message: "Server error",
+      error,
+    });
+  }
+});
+
 // Get Products by Category ID
 routes.get("/products/category/:categoryId", authController.verifyToken, async (req, res) => {
   try {
@@ -93,8 +107,7 @@ routes.get("/products/:id", authController.verifyToken, async (req, res) => {
     res.status(result.status).send(result);
   } catch (error) {
     return res.status(serverError.status).send({
-      ...serverError,
-      error,
+      ...serverError
     });
   }
 });

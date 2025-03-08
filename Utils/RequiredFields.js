@@ -89,7 +89,7 @@ export const reqFields = {
         "type",
         "size"
     ],
-    review: ["userId", "review", "productId"],
+    review: [ "review", "productId"],
     order: [
         "userId",
         "title",
@@ -117,5 +117,9 @@ export const reqFields = {
     cart: [
         "userId",
         "products"
+    ],
+    rating:[
+        "productId",
+        "rating"
     ]
 };

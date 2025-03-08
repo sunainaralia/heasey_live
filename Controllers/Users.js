@@ -99,10 +99,7 @@ class Users {
 
       const emailResult = await sendMail(mailOption);
       if (!emailResult.success) {
-        return {
-          status: 400,
-          message: "email not sent"
-        }
+        return notFound("Email")
       }
       console.log(otp)
 
@@ -165,13 +162,13 @@ class Users {
             });
         }
         else {
-          res.status(tryAgain.status).send(tryAgain);
+          return tryAgain;
         }
       } else {
-        return res.status(invalidOtp.status).send(invalidOtp);
+        return invalidOtp;
       }
     } catch (err) {
-      return res.status(serverError.status).send(serverError);
+      return serverError;
     }
   }
 
@@ -644,8 +641,6 @@ class Users {
       return res.status(serverError.status).send(serverError);
     }
   }
-
-
 }
 
 export default Users;

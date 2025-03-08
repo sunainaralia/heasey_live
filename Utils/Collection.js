@@ -57,7 +57,9 @@ const collections = {
     // feedbacks collection
     feedbacks: () => client.db(process.env.MONGO_DATABASE).collection("feedbacks"),
     // cart collection
-    cart: () => client.db(process.env.MONGO_DATABASE).collection("cart")
+    cart: () => client.db(process.env.MONGO_DATABASE).collection("cart"),
+    // rating collection
+    rating: () => client.db(process.env.MONGO_DATABASE).collection("rating")
 
 }
 
