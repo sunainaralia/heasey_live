@@ -92,17 +92,12 @@ export const reqFields = {
     review: [ "review", "productId"],
     order: [
         "userId",
-        "title",
-        "productId",
-        "type",
-        "amount",
-        "discount",
-        "vendorId"
+        "productId"
     ],
     reward: [
         "range", "rule", "type", "title"
     ],
-    coupon: ["title", "couponCode", "type", "status"],
+    coupon: ["title", "couponCode"],
     query: ["userId", "subject", "description", "severity"],
     reply: [
         "reply",
@@ -121,5 +116,8 @@ export const reqFields = {
     rating:[
         "productId",
         "rating"
-    ]
+    ], distribution: [
+        "adminId", "rate", "level"
+    ],
+    transactions: ["amount", "type"],
 };

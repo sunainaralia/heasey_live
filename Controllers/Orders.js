@@ -7,6 +7,7 @@ import {
   serverError,
   tryAgain,
   deleted,
+  notFound,
 } from "../Utils/Messages.js";
 import OrdersModel from "../Models/Orders.js";
 import collections from "../Utils/Collection.js";
@@ -39,30 +40,58 @@ class Order {
   async createOrder(body) {
     const product = await collections.products().findOne({ _id: new ObjectId(body.productId) });
     if (!product) {
-      return { ...serverError, err: "Product not found" };
+      return notFound("Product");
     }
 
-    // Get the first image from the product image array
-    const productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
-    const productDiscount = product.discount ?? 0;
-    const price = product.price ?? 0;
-    body.image = productImage;
-    body.discount = productDiscount;
-    body.price = price;
+    const checkCoupan = await collections.coupons().find({ productId: body.productId, status: true }).toArray();
+    const shippingSettings = await collections.settings().findOne({ type: "shippingFee" });
+    const platformSettings = await collections.settings().findOne({ type: "platformFee" });
 
+    const shippingFees = parseFloat(shippingSettings?.value || 0);
+    const platformFees = parseFloat(platformSettings?.value || 0);
+    const productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
+    const price = product.price ?? 0;
+
+    let discount = 0;
+    if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+      discount = product.discount[0].type === "percentage"
+        ? parseFloat(price * (product.discount[0].value / 100))
+        : parseFloat(product.discount[0].value);
+    }
+
+    let finalAmount = price + shippingFees + platformFees - discount;
+    let appliedCoupan = 0;
+    let appliedCoupons = [];
+
+    if (checkCoupan.length > 0) {
+      checkCoupan.forEach((coupan) => {
+        appliedCoupons.push(coupan._id.toString());
+        appliedCoupan += coupan.type === "percentage"
+          ? parseFloat(finalAmount * (coupan.percent / 100))
+          : parseFloat(coupan.amount ?? 0);
+      });
+    }
+
+    const amountToPay = finalAmount - appliedCoupan;
     const order = new OrdersModel(
+      null,
       body.userId,
-      body.title,
+      product.title,
       body.productId,
-      body.type,
-      body.status ?? false,
-      body.amount,
-      body.discount,
-      body.image,
-      body.vendorId,
-      body.createdAt ?? new Date(),
-      body.updatedAt ?? new Date(),
-      body.orderId
+      body.type ?? "pending",
+      false,
+      amountToPay,
+      discount,
+      productImage,
+      product.vendorId,
+      new Date(),
+      new Date(),
+      body.orderId || "",
+      shippingFees,
+      appliedCoupons,
+      platformFees,
+      price,
+      ""
     );
 
     try {
@@ -71,10 +100,11 @@ class Order {
         ? { ...columnCreated("Order"), data: { id: result.insertedId, orderId: body.orderId } }
         : tryAgain;
     } catch (err) {
-      console.log(err)
+      console.log(err);
       return { ...serverError, err };
     }
   }
+
 
   // Get Order by ID
   async getOrderById(id) {

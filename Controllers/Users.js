@@ -7,6 +7,7 @@ import settingsModel from "../Models/Settings.js";
 import Auth from "../Utils/Middlewares.js";
 import { isRefferalKeyUnique, generateReferralKey } from "../Utils/referral.js";
 import NotificationModel from "../Models/Notifications.js";
+import DeductionModel from "../Models/Deduction.js";
 import { newRef } from "../Utils/Notifications.js";
 import Notifications from "./Notifications.js";
 import { ObjectId } from "mongodb";
@@ -639,6 +640,132 @@ class Users {
     } catch (err) {
       console.error("Reset password error:", err);
       return res.status(serverError.status).send(serverError);
+    }
+  }
+  // update user income
+  async updateUsersIncome(req, res) {
+    const session = client.startSession();
+    let result = false;
+    const { orderId } = req.body;
+    try {
+      session.startTransaction();
+      let order = await collections.orders().findOneAndUpdate(
+        { _id: new ObjectId(orderId), type: "confirmed" },
+        { $set: { status: true } },
+        { returnDocument: "before", session }
+      );
+
+      if (!order) return tryAgain;
+      const amount = order?.amount;
+      const [user, gstSetting, distributions, tdsSetting, convienceSetting] = await Promise.all([
+        collections.users().findOne(
+          { _id: new ObjectId(order?.userId) },
+          { session }
+        ),
+        collections.settings().findOne({ type: "gst" }),
+        collections.distribution().find({ status: true }).sort({ level: 1 }).toArray({ session }),
+        collections.settings().findOne({ type: "tds" }),
+        collections.settings().findOne({ type: "convenience" }),
+      ])
+      let gst = 0;
+      let convenience = 0;
+      let tds = 0;
+      if (gstSetting?.value) {
+        gst = amountToRelease * (gstSetting.value) / 100
+      };
+      const amountAfterGst = amount - gst;
+      if (tdsSetting?.value) {
+        tds = amountAfterGst * (tdsSetting.value) / 100;
+        const deductions = new DeductionModel(null, order.userId, "", "tds", tds, false, new Date(), new Date());
+        const result = await collections.deduction().insertOne(deductions.toDatabaseJson(), { session });
+        if (!result || !result.insertedId) {
+          await session.abortTransaction();
+          return tryAgain;
+        }
+      };
+      const amountAfterTds = amountAfterGst - tds;
+      if (convienceSetting?.value) {
+        convenience = amountAfterTds * (convienceSetting.value) / 100;
+        const deductions = new DeductionModel(null, order.userId, "", "convenience", convenience, false, new Date(), new Date());
+        const result = await collections.deduction().insertOne(deductions.toDatabaseJson(), { session });
+        if (!result || !result.insertedId) {
+          await session.abortTransaction();
+          return tryAgain;
+        }
+      };
+      const amountToRelease = amountAfterTds - convenience;
+      // release income
+      if (user.level > 0) {
+        let currentSponsorId = user.sponsorId;
+        let i = 1;
+
+        // UNLOCK LEVEL FOR DIRECT USER IF ANY
+        let directInvestment = await collections.portfolioCollection().aggregate([
+          {
+            $match: { sponsorId: currentSponsorId, status: true }
+          },
+          {
+            $group: {
+              _id: null,
+              totalInvest: { $sum: "$amount" }
+            }
+          }
+        ], { session }).toArray();
+
+        if (directInvestment.length < 1 && directInvestment[0].totalInvest == undefined) {
+          await session.abortTransaction();
+          return tryAgain;
+        }
+        console.log(directInvestment[0]?.totalInvest);
+        let unlockedLevel = (directInvestment[0]?.totalInvest) / (parseFloat(minInvestment) * 2);
+
+        let updateQuery = {
+          $set: { unlocked: parseInt(unlockedLevel) > parseInt(levels) ? parseInt(levels) : parseInt(unlockedLevel) },
+          $inc: { member: investment.amount }
+        };
+        while (i <= parseInt(levels)) {
+
+          let updateSponsor = await this.addNewIncome(currentSponsorId, updateQuery, session);
+
+          if (updateSponsor) {
+            delete updateQuery["$set"];
+            let rorRate = await distributions.find(e => i <= parseInt(e.level))?.rate ?? 0;
+            let newRor = new RegularIncomeModel(null, updateSponsor._id, i, investment?._id, parseFloat(currentRoi * parseFloat(rorRate) / 100), user.fullName, "ror", (updateSponsor?.unlocked) >= i, new Date(), new Date(), new Date());
+            let rorResult = await collections.regularIncomeCollection().insertOne(newRor.toDatabaseJson(), { session });
+            if (!rorResult.insertedId) {
+              result = false;
+              break;
+            }
+            if (updateSponsor.level == 0) {
+              result = true;
+              break;
+            }
+            currentSponsorId = updateSponsor.sponsorId;
+            i++;
+          } else {
+            result = false;
+            break;
+          }
+        };
+      } else {
+        result = true;
+      }
+      if (result) {
+        await session.commitTransaction();
+        return incomeActivate;
+
+      } else {
+        await session.abortTransaction();
+        return { ...tryAgain };
+      }
+
+
+    } catch (error) {
+      await session.abortTransaction();
+      console.error("Transaction error:", error);
+      return serverError;
+    } finally {
+      await session.endSession();
     }
   }
 }

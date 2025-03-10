@@ -168,6 +168,25 @@ export const registered = (id, email) => {
         message: `Congratulations! You are the part of Heasey. Kindly login using your Email ID and password.\n ( USER ID : ${id}; EMAIL: : ${email} ).`
     }
 };
+export const transaction = (userId, amount, id, name) => {
+    return `
+<!DOCTYPE html>
+                <html>
+                    <body>
+                        <p>Hello ${name},</p>
+                        <ul>
+                        <li>User ID: ${userId}</li>
+                        <li>Your UTI (unique transaction id) has been generated for amount ${amount}. Generated token is valid for one time. Please make sure to use it carefully</li>
+                        <li> Please don't share this token with any one.</li>
+                        <center>UTI - ${id}</center>
+                        </ul><br/>
+                        <p>For more write us at - <a href="mailto:info@Oumvest.com">info@Oumvest.com</a>.</p></br>
+                          <p> Thanks & Regards </p>
+                           <p> Oumvest India Limited </p>
+                           <img src="/logo.png" width="100%" alt="Oumvest India Limited"/>
+                    </body>
+                </html>`;
+};
 export const invalidLoginCred = (attempt) => {
     return {
         status: 400,

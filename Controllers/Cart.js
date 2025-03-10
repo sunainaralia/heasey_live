@@ -120,21 +120,31 @@ class Cart {
   // Get cart items for the user
   async getCartItems(userId) {
     try {
-      const cartItems = await collections.cart().find({ userId: userId.toString() }).toArray();
+      let cartItems = await collections.cart().find({ userId: userId.toString() }).toArray();
 
       if (!cartItems || cartItems.length === 0) {
         return notFound("Cart");
-      }
+      };
+      const cartItemsWithProducts = await Promise.all(
+        cartItems.map(async (cart) => {
+          const product = await collections.products().findOne({ _id: new ObjectId(cart.productId) });
+          return {
+            ...cart,
+            productDetails: product || null,
+          };
+        })
+      );
 
       return {
         status: 200,
-        data: cartItems,
+        data: cartItemsWithProducts,
       };
     } catch (error) {
       console.error("Error in getCartItems:", error);
       return serverError;
     }
   }
+
 
   // Get cart summary (total quantity and price)
   async getCartSummary() {

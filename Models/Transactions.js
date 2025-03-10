@@ -5,7 +5,7 @@ class TransactionModel {
         amount,
         tax,
         type,
-        tnxId,
+        txnId,
         invoiceNo,
         status,
         paymentMethod,
@@ -17,7 +17,7 @@ class TransactionModel {
         this.amount = amount;
         this.tax = tax;
         this.type = type;
-        this.tnxId = tnxId;
+        this.txnId = txnId;
         this.invoiceNo = invoiceNo;
         this.status = status;
         this.paymentMethod = paymentMethod;
@@ -32,7 +32,7 @@ class TransactionModel {
             jsonData.amount != null ? parseInt(jsonData.amount) : 0,
             jsonData.tax ?? 18,
             jsonData.type ?? "",
-            jsonData.tnxId ?? "",
+            jsonData.txnId ?? "",
             jsonData.invoiceNo != null ? parseInt(jsonData.invoiceNo) : 0,
             jsonData.status != null ? JSON.parse(jsonData.status) : false,
             jsonData.paymentMethod ?? "NEFT",
@@ -48,7 +48,7 @@ class TransactionModel {
             amount: this.amount,
             tax: this.tax,
             type: this.type,
-            tnxId: this.tnxId,
+            txnId: this.txnId,
             invoiceNo: this.invoiceNo,
             status: this.status,
             paymentMethod: this.paymentMethod,

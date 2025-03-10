@@ -43,7 +43,6 @@ routes.post(
   "/orders",
   upload.none(),
   authController.verifyToken,
-  authController.checkAuth,
   authController.checkFields(reqFields.order),
   async (req, res) => {
     try {

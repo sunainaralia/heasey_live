@@ -35,7 +35,7 @@ class CouponsModel {
             jsonData.amount ?? "",
             jsonData.percent ?? "",
             jsonData.type ?? "",
-            jsonData.status ?? false,
+            jsonData.status ?? true,
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date()
         );

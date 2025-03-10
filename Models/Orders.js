@@ -1,5 +1,6 @@
 class OrdersModel {
     constructor(
+        id,
         userId,
         title,
         productId,
@@ -12,8 +13,14 @@ class OrdersModel {
         createdAt,
         updatedAt,
         orderId,
-        shippingFee
+        shippingFee,
+        coupan,
+        platformFee,
+        price,
+        transactionId
+
     ) {
+        this.id = id;
         this.userId = userId;
         this.title = title;
         this.productId = productId;
@@ -26,11 +33,16 @@ class OrdersModel {
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.orderId = orderId;
-        this.shippingFee = shippingFee
+        this.shippingFee = shippingFee;
+        this.coupan = coupan;
+        this.platformFee = platformFee;
+        this.price = price;
+        this.transactionId = transactionId
     }
 
     fromJson(jsonData) {
         return new OrdersModel(
+            jsonData.id ?? null,
             jsonData.userId,
             jsonData.title,
             jsonData.productId,
@@ -43,7 +55,11 @@ class OrdersModel {
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
             jsonData.orderId ?? "",
-            jsonData.shippingFee ?? 0
+            jsonData.shippingFee ?? 0,
+            jsonData.coupan ?? [],
+            jsonData.platformFee ?? 0,
+            jsonData.price ?? 0,
+            jsonData.transactionId ?? ""
         );
     }
 
@@ -63,7 +79,11 @@ class OrdersModel {
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             orderId: this.orderId,
-            shippingFee: this.shippingFee
+            shippingFee: this.shippingFee,
+            coupan: this.coupan,
+            platformFee: this.platformFee,
+            price: this.price,
+            transactionId: this.transactionId
         };
     }
 

@@ -1,8 +1,8 @@
 import express from 'express';
-import Auth from "../Middlewares/Authentication/index.js";
-import { reqFields } from "../Models/requiredFields.js";
-import Distribution from '../Controllers/DistributionController/Distribution.js';
-import { serverError } from '../Utils/Responses/index.js';
+import Auth from '../Utils/Middlewares.js';
+import { reqFields } from '../Utils/RequiredFields.js';
+import Distribution from "../Controllers/Distributions.js";
+import { serverError } from '../Utils/Messages.js';
 const routes = express.Router();
 
 // Initialize controllers and middleware

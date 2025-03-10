@@ -1,5 +1,5 @@
 import { ObjectId } from "mongodb";
-import { client } from "../../dbConnection.js";
+import { client } from "../Db.js";
 import {
   columnUpdated,
   columnCreated,
@@ -8,10 +8,9 @@ import {
   serverError,
   tryAgain,
   deleted,
-  notExist,
-} from "../../Utils/Responses/index.js";
-import DistributionModel from "../../Models/distributionModel.js";
-import collections from "../../Utils/Collections/collections.js";
+  notExist, } from "../Utils/Messages.js";
+import DistributionModel from "../Models/Distribution.js";
+import collections from "../Utils/Collection.js";
 
 class Distribution {
   constructor() { }
@@ -22,7 +21,7 @@ class Distribution {
 
     try {
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .find({})
         .skip(skip)
         .limit(limit)
@@ -52,7 +51,7 @@ class Distribution {
 
     try {
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .find(query)
         .skip(skip)
         .limit(limit)
@@ -79,7 +78,7 @@ class Distribution {
     try {
       const session = client.startSession();
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .insertOne(newDistribution.toDatabaseJson(), { session });
       if (result && result.insertedId) {
         return {
@@ -101,7 +100,7 @@ class Distribution {
   async getDistributionById(id) {
     try {
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .findOne({
           _id: new ObjectId(id),
         });
@@ -128,7 +127,7 @@ class Distribution {
       const updateFields = new DistributionModel().toUpdateJson(body);
       const { id } = body;
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .updateOne(
           {
             _id: new ObjectId(id),
@@ -159,7 +158,7 @@ class Distribution {
   async deleteDistributionById(id) {
     try {
       const result = await collections
-        .distributionCollection()
+        .distribution()
         .deleteOne({
           _id: new ObjectId(id),
         });
