@@ -74,8 +74,10 @@ class Products {
 
   // Create new Product
   async createProduct(body) {
-    const product = productsModel.fromJson(body);
     try {
+      const platformSettings = await collections.settings().findOne({ type: "platformFee" });
+      const platformFees = parseFloat(platformSettings?.value || 0);
+      const product = new ProductsModel(null, body.title, body.description, body.vendorId, body.categoryId, body.discount, [], body.quantity, body.sku, false, new Date(), new Date(), body.price, [], [], body.shippingFee, platformFees);
       const result = await collections.products().insertOne(product.toDatabaseJson());
       return result?.insertedId
         ? { ...columnCreated("Product"), data: { id: result.insertedId } }
@@ -88,17 +90,42 @@ class Products {
   // Get Product by ID
   async getProductById(id) {
     try {
-      const result = await collections.products().findOne({ _id:new ObjectId(id) });
+      const result = await collections.products().findOne({ _id: new ObjectId(id) });
+
       if (!result) {
         return InvalidId("Product Detail");
       }
+      const settings = await collections.settings().findOne({ type: "platformFee" });
+      let platformFees = settings?.value ? parseFloat(settings.value) : 0;
 
+      const coupons = await collections.coupons().find({
+        $or: [{ productId: new ObjectId(id), status: true }, { productId: null, status: true }, { productId: "", status: true }]
+      }).toArray();
+
+      let discount = 0;
+      if (result.discount && Array.isArray(result.discount) && result.discount.length > 0) {
+        discount = result.discount[0].type === "percentage"
+          ? parseFloat(result.price * (result.discount[0].value / 100))
+          : parseFloat(result.discount[0].value);
+      }
+
+      let amount = 0;
+      coupons.forEach((coupon) => {
+        if (parseFloat(coupon.percent) > 0) {
+          amount += (parseFloat(coupon.percent) / 100) * (result.price + result.shippingFee + platformFees - discount);
+        } else {
+          amount += parseFloat(coupon.amount || 0);
+        }
+      });
+
+      result.coupon = amount;
       if (result.images && result.images.length > 0) {
         result.images = result.images.map((imgPath) => readFile(imgPath) ?? "");
       }
 
       return { ...fetched("Product"), data: result };
     } catch (err) {
+      console.error("Error in getProductById:", err);
       return { ...serverError };
     }
   }

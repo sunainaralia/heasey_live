@@ -43,26 +43,23 @@ class Order {
       return notFound("Product");
     }
 
-    const checkCoupan = await collections.coupons().find({ productId: body.productId, status: true }).toArray();
-    const shippingSettings = await collections.settings().findOne({ type: "shippingFee" });
+    const checkCoupan = await collections.coupons().find({
+      $or: [{ productId: new ObjectId(id), status: true }, { productId: null, status: true }, { productId: "", status: true }]
+    }).toArray();
     const platformSettings = await collections.settings().findOne({ type: "platformFee" });
-
-    const shippingFees = parseFloat(shippingSettings?.value || 0);
+    const shippingFees = parseFloat(product?.shippingFees || 0);
     const platformFees = parseFloat(platformSettings?.value || 0);
     const productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
     const price = product.price ?? 0;
-
     let discount = 0;
     if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
       discount = product.discount[0].type === "percentage"
         ? parseFloat(price * (product.discount[0].value / 100))
         : parseFloat(product.discount[0].value);
     }
-
     let finalAmount = price + shippingFees + platformFees - discount;
     let appliedCoupan = 0;
     let appliedCoupons = [];
-
     if (checkCoupan.length > 0) {
       checkCoupan.forEach((coupan) => {
         appliedCoupons.push(coupan._id.toString());
@@ -70,8 +67,7 @@ class Order {
           ? parseFloat(finalAmount * (coupan.percent / 100))
           : parseFloat(coupan.amount ?? 0);
       });
-    }
-
+    };
     const amountToPay = finalAmount - appliedCoupan;
     const order = new OrdersModel(
       null,

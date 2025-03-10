@@ -695,61 +695,7 @@ class Users {
       };
       const amountToRelease = amountAfterTds - convenience;
       // release income
-      if (user.level > 0) {
-        let currentSponsorId = user.sponsorId;
-        let i = 1;
-
-        // UNLOCK LEVEL FOR DIRECT USER IF ANY
-        let directInvestment = await collections.portfolioCollection().aggregate([
-          {
-            $match: { sponsorId: currentSponsorId, status: true }
-          },
-          {
-            $group: {
-              _id: null,
-              totalInvest: { $sum: "$amount" }
-            }
-          }
-        ], { session }).toArray();
-
-        if (directInvestment.length < 1 && directInvestment[0].totalInvest == undefined) {
-          await session.abortTransaction();
-          return tryAgain;
-        }
-        console.log(directInvestment[0]?.totalInvest);
-        let unlockedLevel = (directInvestment[0]?.totalInvest) / (parseFloat(minInvestment) * 2);
-
-        let updateQuery = {
-          $set: { unlocked: parseInt(unlockedLevel) > parseInt(levels) ? parseInt(levels) : parseInt(unlockedLevel) },
-          $inc: { member: investment.amount }
-        };
-        while (i <= parseInt(levels)) {
-
-          let updateSponsor = await this.addNewIncome(currentSponsorId, updateQuery, session);
-
-          if (updateSponsor) {
-            delete updateQuery["$set"];
-            let rorRate = await distributions.find(e => i <= parseInt(e.level))?.rate ?? 0;
-            let newRor = new RegularIncomeModel(null, updateSponsor._id, i, investment?._id, parseFloat(currentRoi * parseFloat(rorRate) / 100), user.fullName, "ror", (updateSponsor?.unlocked) >= i, new Date(), new Date(), new Date());
-            let rorResult = await collections.regularIncomeCollection().insertOne(newRor.toDatabaseJson(), { session });
-            if (!rorResult.insertedId) {
-              result = false;
-              break;
-            }
-            if (updateSponsor.level == 0) {
-              result = true;
-              break;
-            }
-            currentSponsorId = updateSponsor.sponsorId;
-            i++;
-          } else {
-            result = false;
-            break;
-          }
-        };
-      } else {
-        result = true;
-      }
+    
       if (result) {
         await session.commitTransaction();
         return incomeActivate;

@@ -14,7 +14,9 @@ class ProductsModel {
         updatedAt,
         price,
         reviews,
-        ratings
+        ratings,
+        shippingFee,
+        platformFee,
     ) {
         this.id = id;
         this.title = title;
@@ -31,6 +33,8 @@ class ProductsModel {
         this.price = price;
         this.reviews = reviews;
         this.ratings = ratings;
+        this.shippingFee = shippingFee;
+        this.platformFee = platformFee;
     }
 
     fromJson(jsonData) {
@@ -49,7 +53,9 @@ class ProductsModel {
             jsonData.updatedAt ?? new Date(),
             jsonData.price ?? 0,
             jsonData.reviews ?? [],
-            jsonData.ratings ?? []
+            jsonData.ratings ?? [],
+            jsonData.shippingFee ?? 0,
+            jsonData.platformFee ?? 0,
         );
     }
 
@@ -68,7 +74,9 @@ class ProductsModel {
             updatedAt: this.updatedAt,
             price: this.price,
             reviews: this.reviews,
-            ratings: this.ratings
+            ratings: this.ratings,
+            shippingFee: this.shippingFee,
+            platformFee: this.platformFee,
         };
     }
 
