@@ -124,13 +124,51 @@ class Cart {
 
       if (!cartItems || cartItems.length === 0) {
         return notFound("Cart");
-      };
+      }
+
       const cartItemsWithProducts = await Promise.all(
         cartItems.map(async (cart) => {
-          const product = await collections.products().findOne({ _id: new ObjectId(cart.productId) });
+          let product = await collections.products().findOne({ _id: new ObjectId(cart.productId) });
+
+          if (!product) {
+            return { ...cart, productDetails: null };
+          }
+
+          // Fetch platform fee
+          const settings = await collections.settings().findOne({ type: "platformFee" });
+          let platformFees = settings?.value ? parseFloat(settings.value) : 0;
+
+          // Fetch applicable coupons
+          const coupons = await collections.coupons().find({
+            $or: [{ productId: new ObjectId(cart.productId), status: true }, { productId: null, status: true }, { productId: "", status: true }]
+          }).toArray();
+
+          // Calculate discount
+          let discount = 0;
+          if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+            discount = product.discount[0].type === "percentage"
+              ? parseFloat(product.price * (product.discount[0].value / 100))
+              : parseFloat(product.discount[0].value);
+          }
+
+          // Calculate coupon discount
+          let amount = 0;
+          coupons.forEach((coupon) => {
+            if (parseFloat(coupon.percent) > 0) {
+              amount += (parseFloat(coupon.percent) / 100) * (product.price + product.shippingFee + platformFees - discount);
+            } else {
+              amount += parseFloat(coupon.amount || 0);
+            }
+          });
+
+          // Set product.coupon AFTER loop
+          product.coupon = amount;
+
+          console.log("Coupon for product:", product._id, "=>", product.coupon);
+
           return {
             ...cart,
-            productDetails: product || null,
+            productDetails: product,
           };
         })
       );
