@@ -388,24 +388,16 @@ class Users {
   async updateUser(req, res) {
     try {
       const userId = req.body.userId;
-
-      // Validate the userId
       if (!ObjectId.isValid(userId)) {
         const msg = invalidId("User");
-        return res.status(msg.status).send(msg);
-      }
-
-      // Verify if the user exists
+        return msg;
+      };
       const user = await collections.users().findOne({ _id: new ObjectId(userId) });
       if (!user) {
         const msg = invalidId("User");
-        return res.status(msg.status).send(msg);
-      }
-
-      // Prepare the updated fields
+        return msg;
+      };
       const updatedFields = new UserModel().toUpdateJson(req.body);
-
-      // Update the user's information in the database
       const result = await collections.users().updateOne(
         { _id: new ObjectId(userId) },
         { $set: updatedFields }
@@ -413,18 +405,15 @@ class Users {
 
       if (result.modifiedCount > 0) {
         const msg = columnUpdated("User");
-        return res.status(msg.status).send({
-          ...msg,
-          data: updatedFields,
-        });
+        return { ...msg, data: (result) };
       } else {
         const msg = tryAgain;
-        return res.status(msg.status).send(msg);
+        return msg;
       }
     } catch (err) {
       console.error("Error in updateUser:", err);
       const msg = serverError;
-      return res.status(msg.status).send(msg);
+      return msg;
     }
   }
   // get user by id
@@ -705,12 +694,12 @@ class Users {
 
       // ----> UPDATE USER'S UNLOCK PROPERTY BASED ON PURCHASES <----
       let directReferralPurchases = await collections.orders.aggregate([
-        { $match: { userId: user._id, status: true } }, 
+        { $match: { userId: user._id, status: true } },
         { $group: { _id: null, totalAmountSpent: { $sum: "$amount" } } }
       ], { session }).toArray();
 
       if (directReferralPurchases.length > 0 && directReferralPurchases[0].totalAmountSpent) {
-        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / 20000); 
+        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / 20000);
         let updatedUnlockLevel = newUnlockLevel > 16 ? 16 : newUnlockLevel;
 
         let updateUnlock = await collections.users().updateOne(

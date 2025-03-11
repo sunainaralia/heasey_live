@@ -29,25 +29,57 @@ class Products {
   // Get all Products with pagination
   async getProducts(page, limit) {
     let skip = parseInt(page) * limit;
+
     try {
-      let result = await collections.products().find({}).skip(skip).limit(limit).toArray();
-      if (result.length > 0) {
-        result = await Promise.all(
-          result.map(async (product) => {
-            if (product.images && product.images.length > 0) {
-              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
-            }
-            return product;
-          })
-        );
-        return { ...fetched("Products"), data: result };
-      } else {
+      let products = await collections.products().find({}).skip(skip).limit(limit).toArray();
+
+      if (products.length === 0) {
         return tryAgain;
       }
+      const settings = await collections.settings().findOne({ type: "platformFee" });
+      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
+      products = await Promise.all(products.map(async (product) => {
+        let discount = 0;
+        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+          discount = product.discount[0].type === "percentage"
+            ? parseFloat(product.price * (product.discount[0].value / 100))
+            : parseFloat(product.discount[0].value);
+        }
+        const coupons = await collections.coupons().find({
+          $or: [
+            { productId: new ObjectId(product._id), status: true },
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        }).toArray();
+
+        let couponAmount = 0;
+        if (coupons.length > 0) {
+          coupons.forEach((coupon) => {
+            if (parseFloat(coupon.percent) > 0) {
+              couponAmount += (parseFloat(coupon.percent) / 100) * (product.price + (product.shippingFee ?? 0) + platformFee - discount);
+            } else {
+              couponAmount += parseFloat(coupon.amount || 0);
+            }
+          });
+        }
+        product.coupon = couponAmount;
+        product.platformFee = platformFee;
+        if (product.images && product.images.length > 0) {
+          product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+        }
+
+        return product;
+      }));
+
+      return { ...fetched("Products"), data: products };
+
     } catch (err) {
+      console.error("Error in getProducts:", err);
       return { ...serverError, err };
     }
   }
+
 
   // Get Products by Category ID
   async getProductsByCategoryId(categoryId) {
@@ -302,7 +334,6 @@ class Products {
       return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
-
 
   // wishlist product
   async getWishlistProducts(req) {
