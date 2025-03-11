@@ -149,9 +149,6 @@ class Order {
     }
   }
 
-
-
-
   // Get Order by ID
   async getOrderById(id) {
     try {

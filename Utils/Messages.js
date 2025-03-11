@@ -193,6 +193,7 @@ export const invalidLoginCred = (attempt) => {
         message: `Invalid Password. ${attempt} Attempts left. Kindly reset your password or enter correct password`,
     }
 };
+export const insufficientBalInWallet = { status: 400, message: "Wallet update failed. Insufficient balance or user not found." };
 export const otpSent = {
     status: 200,
     message:

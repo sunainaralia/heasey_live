@@ -32,7 +32,7 @@ routes.get(
 routes.post(
   "/create-transaction",
   authController.verifyToken,
-  authController.checkFields(["userId", "paymentMethod", "orderId"]),
+  authController.checkFields(["userId", "paymentMethod", "amount"]),
   async (req, res) => {
     try {
       const result = await usertrans.createTransaction({
@@ -233,6 +233,27 @@ routes.delete(
       return res.status(serverError.status).send({
         ...serverError,
         error,
+      });
+    }
+  }
+);
+
+// pay from wallet for product 
+routes.post(
+  "/pay-from-wallet",
+  authController.verifyToken,
+  authController.checkFields(["orderId", "paymentMethod", "amount"]),
+  async (req, res) => {
+    try {
+      const result = await usertrans.payFromWallet(
+        req,
+      );
+      return res.status(result.status).send(result);
+    } catch (err) {
+      console.log(err);
+      return res.status(serverError.status).send({
+        ...serverError,
+        err,
       });
     }
   }

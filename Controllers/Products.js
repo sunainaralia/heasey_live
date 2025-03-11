@@ -80,7 +80,6 @@ class Products {
     }
   }
 
-
   // Get Products by Category ID
   async getProductsByCategoryId(categoryId) {
     try {
@@ -334,7 +333,6 @@ class Products {
     }
   }
 
-
   // find popular products
   async getPopularProducts(req) {
     try {
@@ -405,7 +403,6 @@ class Products {
       return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
-
 
   // wishlist product
   async getWishlistProducts(req) {
@@ -479,9 +476,6 @@ class Products {
       return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
-
-
-
 
 };
 
