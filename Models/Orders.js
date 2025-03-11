@@ -17,7 +17,8 @@ class OrdersModel {
         coupan,
         platformFee,
         price,
-        transactionId
+        transactionId,
+        sponsorId
 
     ) {
         this.id = id;
@@ -37,7 +38,8 @@ class OrdersModel {
         this.coupan = coupan;
         this.platformFee = platformFee;
         this.price = price;
-        this.transactionId = transactionId
+        this.transactionId = transactionId;
+        this.sponsorId = sponsorId
     }
 
     fromJson(jsonData) {
@@ -59,7 +61,8 @@ class OrdersModel {
             jsonData.coupan ?? [],
             jsonData.platformFee ?? 0,
             jsonData.price ?? 0,
-            jsonData.transactionId ?? ""
+            jsonData.transactionId ?? "",
+            jsonData.sponsorId ?? ""
         );
     }
 
@@ -83,7 +86,8 @@ class OrdersModel {
             coupan: this.coupan,
             platformFee: this.platformFee,
             price: this.price,
-            transactionId: this.transactionId
+            transactionId: this.transactionId,
+            sponsorId: this.sponsorId
         };
     }
 

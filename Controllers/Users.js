@@ -649,7 +649,7 @@ class Users {
       if (!order) return tryAgain;
 
       const amount = order?.amount;
-      const [user, gstSetting, distributions, tdsSetting, convienceSetting] = await Promise.all([
+      const [user, gstSetting, distributions, tdsSetting, convienceSetting, minPurchase] = await Promise.all([
         collections.users().findOne(
           { _id: new ObjectId(order?.userId) },
           { session }
@@ -658,9 +658,10 @@ class Users {
         collections.distribution().find({ status: true }).sort({ level: 1 }).toArray(),
         collections.settings().findOne({ type: "tds" }),
         collections.settings().findOne({ type: "convenience" }),
+        collections.settings().findOne({ type: "min-purchase" })
       ]);
 
-      let gst = 0, convenience = 0, tds = 0;
+      let gst = 0, convenience = 0, tds = 0, minimumPurchase = parseInt(minPurchase.value) ?? 7000;
       if (gstSetting?.value) gst = (amount * gstSetting.value) / 100;
       const amountAfterGst = amount - gst;
 
@@ -686,22 +687,21 @@ class Users {
           await session.abortTransaction();
           return tryAgain;
         }
-      }
+      };
 
       const amountToRelease = amountAfterTds - convenience;
       let currentSponsorId = user.sponsorId;
       let i = 1;
 
       // ----> UPDATE USER'S UNLOCK PROPERTY BASED ON PURCHASES <----
-      let directReferralPurchases = await collections.orders.aggregate([
-        { $match: { userId: user._id, status: true } },
+      let directReferralPurchases = await collections.orders().aggregate([
+        { $match: { sponsorId: currentSponsorId, status: true } },
         { $group: { _id: null, totalAmountSpent: { $sum: "$amount" } } }
       ], { session }).toArray();
 
       if (directReferralPurchases.length > 0 && directReferralPurchases[0].totalAmountSpent) {
-        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / 20000);
+        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / minimumPurchase);
         let updatedUnlockLevel = newUnlockLevel > 16 ? 16 : newUnlockLevel;
-
         let updateUnlock = await collections.users().updateOne(
           { _id: new ObjectId(user._id) },
           { $set: { unlocked: updatedUnlockLevel, updatedAt: new Date() } },
@@ -720,7 +720,7 @@ class Users {
         if (!sponsor) break;
 
         let distributionRate = distributions.find(e => i === parseInt(e.level))?.rate ?? 0;
-        let levelIncome = (amountToRelease * distributionRate) / 100;
+        let levelIncome = parseFloat((amountToRelease * distributionRate) / 100);
 
         if (sponsor.unlocked >= i) {
           await collections.users().updateOne(

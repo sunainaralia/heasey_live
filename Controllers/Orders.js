@@ -42,7 +42,7 @@ class Order {
     let sessionActive = false;
 
     try {
-      await session.startTransaction(); 
+      await session.startTransaction();
       sessionActive = true;
 
       const product = await collections.products().findOne(
@@ -53,7 +53,13 @@ class Order {
         await session.abortTransaction();
         sessionActive = false;
         return notFound("Product");
-      }
+      };
+      const user = await collections.users().findOne({ _id: new ObjectId(body.userId) });
+      if (!user) {
+        await session.abortTransaction();
+        sessionActive = false;
+        return notFound("User");
+      };
 
       const checkCoupan = await collections.coupons()
         .find({
@@ -95,7 +101,7 @@ class Order {
         });
       }
 
-      let amountToPay = Math.max(0, finalAmount - appliedCoupan); 
+      let amountToPay = Math.max(0, finalAmount - appliedCoupan);
 
       const order = new OrdersModel(
         null,
@@ -115,7 +121,9 @@ class Order {
         appliedCoupons,
         platformFees,
         price,
-        ""
+        "",
+        user.sponsorId.toString()
+
       );
 
       const result = await collections.orders().insertOne(order.toDatabaseJson(), { session });

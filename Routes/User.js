@@ -203,7 +203,7 @@ routes.post(
     authentication.checkFields(["orderId"]),
     async (req, res) => {
         try {
-            const result = await userController.updateUsersIncome(req);
+            const result = await users.updateUsersIncome(req);
             return res.status(result.status).send(result);
         } catch (error) {
             console.error("Error updating user income:", error);

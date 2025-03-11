@@ -12,7 +12,8 @@ import {
   notExist,
   productLiked,
   notFound,
-  productDisliked
+  productDisliked,
+  invalidId
 } from "../Utils/Messages.js";
 import ProductsModel from "../Models/Products.js";
 import collections from "../Utils/Collection.js";
@@ -396,11 +397,11 @@ class Products {
         return product;
       }));
 
-      return { status: 200, message: "Popular products retrieved", data: allProducts };
+      return { ...fetched("Popular product"), data: allProducts };
 
     } catch (err) {
       console.error("Error fetching popular products:", err);
-      return { status: 500, message: "Internal Server Error", error: err.toString() };
+      return serverError;
     }
   }
 
@@ -410,7 +411,7 @@ class Products {
       const userId = req.headers.userid || req.headers.userId;
 
       if (!ObjectId.isValid(userId)) {
-        return { status: 400, message: "Invalid User ID" };
+        return invalidId("User");
       }
       const user = await collections.users().findOne(
         { _id: new ObjectId(userId) },
@@ -469,11 +470,11 @@ class Products {
         return product;
       }));
 
-      return { status: 200, message: "Liked products retrieved", data: likedProducts };
+      return { ...fetched("Liked Products"), data: likedProducts };
 
     } catch (err) {
       console.error("Error fetching liked products:", err);
-      return { status: 500, message: "Internal Server Error", error: err.toString() };
+      return serverError;
     }
   }
 
