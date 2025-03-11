@@ -17,6 +17,7 @@ import fs from 'fs';
 import path from "path";
 import { readFile } from "../Utils/FileReader.js";
 import bcrypt from 'bcrypt';
+import IncomeModel from "../Models/Incomes.js";
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = dirname(__filename);
 const notifications = new Notifications();
@@ -647,6 +648,7 @@ class Users {
     const session = client.startSession();
     let result = false;
     const { orderId } = req.body;
+
     try {
       session.startTransaction();
       let order = await collections.orders().findOneAndUpdate(
@@ -656,6 +658,7 @@ class Users {
       );
 
       if (!order) return tryAgain;
+
       const amount = order?.amount;
       const [user, gstSetting, distributions, tdsSetting, convienceSetting] = await Promise.all([
         collections.users().findOne(
@@ -663,48 +666,121 @@ class Users {
           { session }
         ),
         collections.settings().findOne({ type: "gst" }),
-        collections.distribution().find({ status: true }).sort({ level: 1 }).toArray({ session }),
+        collections.distribution().find({ status: true }).sort({ level: 1 }).toArray(),
         collections.settings().findOne({ type: "tds" }),
         collections.settings().findOne({ type: "convenience" }),
-      ])
-      let gst = 0;
-      let convenience = 0;
-      let tds = 0;
-      if (gstSetting?.value) {
-        gst = amountToRelease * (gstSetting.value) / 100
-      };
+      ]);
+
+      let gst = 0, convenience = 0, tds = 0;
+      if (gstSetting?.value) gst = (amount * gstSetting.value) / 100;
       const amountAfterGst = amount - gst;
+
       if (tdsSetting?.value) {
-        tds = amountAfterGst * (tdsSetting.value) / 100;
-        const deductions = new DeductionModel(null, order.userId, "", "tds", tds, false, new Date(), new Date());
-        const result = await collections.deduction().insertOne(deductions.toDatabaseJson(), { session });
-        if (!result || !result.insertedId) {
+        tds = (amountAfterGst * tdsSetting.value) / 100;
+        let deduction = new DeductionModel(null, order.userId, "", "tds", tds, false, new Date(), new Date());
+        let tdsResult = await collections.deduction().insertOne(deduction.toDatabaseJson(), { session });
+
+        if (!tdsResult.insertedId) {
           await session.abortTransaction();
           return tryAgain;
         }
-      };
+      }
+
       const amountAfterTds = amountAfterGst - tds;
+
       if (convienceSetting?.value) {
-        convenience = amountAfterTds * (convienceSetting.value) / 100;
-        const deductions = new DeductionModel(null, order.userId, "", "convenience", convenience, false, new Date(), new Date());
-        const result = await collections.deduction().insertOne(deductions.toDatabaseJson(), { session });
-        if (!result || !result.insertedId) {
+        convenience = (amountAfterTds * convienceSetting.value) / 100;
+        let deduction = new DeductionModel(null, order.userId, "", "convenience", convenience, false, new Date(), new Date());
+        let convenienceResult = await collections.deduction().insertOne(deduction.toDatabaseJson(), { session });
+
+        if (!convenienceResult.insertedId) {
           await session.abortTransaction();
           return tryAgain;
         }
-      };
+      }
+
       const amountToRelease = amountAfterTds - convenience;
-      // release income
-    
+      let currentSponsorId = user.sponsorId;
+      let i = 1;
+
+      // ----> UPDATE USER'S UNLOCK PROPERTY BASED ON PURCHASES <----
+      let directReferralPurchases = await collections.orders.aggregate([
+        { $match: { userId: user._id, status: true } }, 
+        { $group: { _id: null, totalAmountSpent: { $sum: "$amount" } } }
+      ], { session }).toArray();
+
+      if (directReferralPurchases.length > 0 && directReferralPurchases[0].totalAmountSpent) {
+        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / 20000); 
+        let updatedUnlockLevel = newUnlockLevel > 16 ? 16 : newUnlockLevel;
+
+        let updateUnlock = await collections.users().updateOne(
+          { _id: new ObjectId(user._id) },
+          { $set: { unlocked: updatedUnlockLevel, updatedAt: new Date() } },
+          { session }
+        );
+
+        if (!updateUnlock.modifiedCount) {
+          await session.abortTransaction();
+          return tryAgain;
+        }
+      }
+
+      while (i <= 16 && currentSponsorId) {
+        let sponsor = await collections.users().findOne({ _id: new ObjectId(currentSponsorId) }, { session });
+
+        if (!sponsor) break;
+
+        let distributionRate = distributions.find(e => i === parseInt(e.level))?.rate ?? 0;
+        let levelIncome = (amountToRelease * distributionRate) / 100;
+
+        if (sponsor.unlocked >= i) {
+          await collections.users().updateOne(
+            { _id: new ObjectId(sponsor._id) },
+            {
+              $inc: {
+                wallet: levelIncome,
+                totalEarn: levelIncome
+              },
+              $set: { updatedAt: new Date() }
+            },
+            { session }
+          );
+
+          let newIncomeLog = new IncomeModel(
+            null,
+            order.userId,
+            sponsor._id,
+            i,
+            "referral_income",
+            levelIncome,
+            true,
+            new Date(),
+            new Date()
+          );
+
+          let incomeLogResult = await collections.incomes().insertOne(newIncomeLog.toDatabaseJson(), { session });
+
+          if (!incomeLogResult.insertedId) {
+            result = false;
+            break;
+          }
+        }
+
+        if (sponsor.level === 0) {
+          result = true;
+          break;
+        }
+        currentSponsorId = sponsor.sponsorId;
+        i++;
+      }
+
       if (result) {
         await session.commitTransaction();
         return incomeActivate;
-
       } else {
         await session.abortTransaction();
         return { ...tryAgain };
       }
-
 
     } catch (error) {
       await session.abortTransaction();
@@ -714,6 +790,7 @@ class Users {
       await session.endSession();
     }
   }
+
 }
 
 export default Users;

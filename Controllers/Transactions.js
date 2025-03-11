@@ -300,37 +300,42 @@ class UserTrans extends Notifications {
   // create transactions
   async createTransaction(body) {
     const session = client.startSession();
-    session.startTransaction();
+    let sessionActive = false;
+
     try {
+      await session.startTransaction();
+      sessionActive = true;
       const orderId = body?.orderId || "";
       const [user, taxConfig, order, invoiceNo] = await Promise.all([
         collections.users().findOne(
           { _id: new ObjectId(body?.userId) },
           { session }
         ),
-        collections.settings()
-          .findOne({ type: "tax-config" }, { session }),
+        collections.settings().findOne({ type: "tax-config" }, { session }),
         collections.orders().findOne(
-          { _id: new ObjectId(orderId) }, { session }
+          { _id: new ObjectId(orderId) },
+          { session }
         ),
         collections.transactions().countDocuments()
       ]);
 
       if (!user || !taxConfig || !order || invoiceNo == null) {
         await session.abortTransaction();
+        sessionActive = false;
         return tryAgain;
       }
 
-      const taxRate = taxConfig?.value;
+      const taxRate = parseInt(taxConfig?.value ?? 0);
+      const transactionAmount = parseFloat(order.amount ?? 0);
 
       const newTransaction = new UserTransactionModel(
         null,
         body?.userId,
-        parseFloat(body.amount) ?? parseFloat(order.amount),
-        parseInt(taxRate),
+        transactionAmount,
+        taxRate,
         "",
         "",
-        `hea|${parseInt(invoiceNo) + 1}`,
+        `hea|${invoiceNo + 1}`,
         true,
         body.paymentMethod,
         new Date(),
@@ -338,44 +343,76 @@ class UserTrans extends Notifications {
       );
 
       const result = await collections.transactions().insertOne(newTransaction.toDatabaseJson(), { session });
+
       if (!result || !result.insertedId) {
         await session.abortTransaction();
+        sessionActive = false;
         return tryAgain;
       }
 
-      let option = options(
-        user.email,
-        "Heasey Transaction Code Generated",
-        transaction(user?._id, transaction?.amount, result?.insertedId, user?.fullName)
+
+      const updateWallet = await collections.users().findOneAndUpdate(
+        { _id: new ObjectId(body?.userId) },
+        { $inc: { wallet: transactionAmount } },
+        { session, returnDocument: "after" }
       );
 
-      await sendMail(option);
+      let emailOptions = options(
+        user.email,
+        "Heasey Transaction Code Generated",
+        transaction(user?._id, newTransaction.amount, result?.insertedId, user?.fullName)
+      );
+
+      await sendMail(emailOptions);
 
       let orderUpdate = await collections.orders().updateOne(
         { _id: new ObjectId(orderId) },
         { $set: { transactionId: result.insertedId.toString(), type: "confirmed" } },
         { session }
       );
-      if (orderUpdate.acknowledged && orderUpdate.modifiedCount > 0) {
 
+      if (orderUpdate.acknowledged && orderUpdate.modifiedCount > 0) {
         await session.commitTransaction();
+        sessionActive = false;
 
         return {
           ...columnCreated("Transaction"),
           data: { id: result.insertedId }
         };
       } else {
+        await session.abortTransaction();
+        sessionActive = false;
         return tryAgain;
       }
     } catch (error) {
       console.error(error);
-      await session.abortTransaction();
+      if (sessionActive) {
+        await session.abortTransaction();
+        sessionActive = false;
+      }
       return serverError;
-    }
-    finally {
-      session.endSession()
+    } finally {
+      if (sessionActive) {
+        console.log("Session was not closed properly. Ending session.");
+        await session.abortTransaction();
+      }
+      session.endSession();
     }
   }
+  // pay through wallet 
+  async payFromWallet(req) {
+    try {
+      const { amount } = req.body;
+      const userId = req.headers.userid || req.headers.userId;
+      
+
+
+    } catch (err) {
+      console.log("errrrrrrrr", err)
+      return serverError
+    }
+  }
+
 
 }
 

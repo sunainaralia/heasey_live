@@ -100,6 +100,7 @@ routes.post(
   }
 );
 
+
 // Get Product by ID
 routes.get("/products/:id", authController.verifyToken, async (req, res) => {
   try {

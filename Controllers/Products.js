@@ -110,13 +110,15 @@ class Products {
       }
 
       let amount = 0;
-      coupons.forEach((coupon) => {
-        if (parseFloat(coupon.percent) > 0) {
-          amount += (parseFloat(coupon.percent) / 100) * (result.price + result.shippingFee + platformFees - discount);
-        } else {
-          amount += parseFloat(coupon.amount || 0);
-        }
-      });
+      if (coupons.length > 0) {
+        coupons.forEach((coupon) => {
+          if (parseFloat(coupon.percent) > 0) {
+            amount += (parseFloat(coupon.percent) / 100) * (result.price + result.shippingFee + platformFees - discount);
+          } else {
+            amount += parseFloat(coupon.amount || 0);
+          }
+        });
+      }
 
       result.coupon = amount;
       if (result.images && result.images.length > 0) {

@@ -27,7 +27,10 @@ class UserModel {
         updatedAt,
         canLogin,
         address,
-        likedProducts
+        likedProducts,
+        state,
+        pinCode,
+        city
     ) {
         this._id = _id;
         this.fullName = fullName;
@@ -56,7 +59,10 @@ class UserModel {
         this.updatedAt = updatedAt;
         this.canLogin = canLogin;
         this.address = address;
-        this.likedProducts = likedProducts
+        this.likedProducts = likedProducts;
+        this.state = state;
+        this.pinCode = pinCode;
+        this.city = city
     }
 
     fromJson(jsonData) {
@@ -88,7 +94,11 @@ class UserModel {
             jsonData.updatedAt ?? new Date(),
             jsonData.canLogin ?? false,
             jsonData.address ?? "",
-            jsonData.likedProducts??[]
+            jsonData.likedProducts ?? [],
+            jsonData.state ?? "",
+            jsonData.pinCode ?? "",
+            jsonData.city ?? ""
+
         );
     }
 
@@ -123,7 +133,11 @@ class UserModel {
             updatedAt: this.updatedAt,
             canLogin: this.canLogin,
             address: this.address,
-            likedProducts: this.likedProducts
+            likedProducts: this.likedProducts,
+            state: this.state,
+            pinCode: this.pinCode,
+            city: this.city,
+
         };
     }
 
@@ -154,7 +168,11 @@ class UserModel {
             updatedAt: this.updatedAt,
             canLogin: this.canLogin,
             address: this.address,
-            likedProducts: this.likedProducts
+            likedProducts: this.likedProducts,
+            state: this.state,
+            pinCode: this.pinCode,
+            city: this.city,
+
         };
     }
 
@@ -174,7 +192,10 @@ class UserModel {
             createdAt: e.createdAt,
             canLogin: e.canLogin,
             address: e.address,
-            likedProducts: e.likedProducts
+            likedProducts: e.likedProducts,
+            state: e.state,
+            pinCode: e.pinCode,
+            city: e.city,
         };
     }
 
