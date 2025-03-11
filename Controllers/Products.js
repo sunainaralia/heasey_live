@@ -265,39 +265,81 @@ class Products {
     const skip = parseInt(page) * limit;
     const thirtyDaysAgo = new Date();
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
+
     try {
+      const settings = await collections.settings().findOne({ type: "platformFee" });
+      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
       let latestProducts = await collections.products()
         .find({ createdAt: { $gte: thirtyDaysAgo } })
         .sort({ createdAt: -1 })
         .skip(skip)
-        .limit(limit).toArray();
+        .limit(limit)
+        .toArray();
+
       let remainingProducts = await collections.products()
         .find({ createdAt: { $lt: thirtyDaysAgo } })
         .sort({ createdAt: -1 })
         .toArray();
+
       let allProducts = [...latestProducts, ...remainingProducts];
-      allProducts = await Promise.all(
-        allProducts.map(async (product) => {
-          if (product.images && product.images.length > 0) {
+      allProducts = await Promise.all(allProducts.map(async (product) => {
+        let discount = 0;
+        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+          discount = product.discount[0].type === "percentage"
+            ? parseFloat(product.price * (product.discount[0].value / 100))
+            : parseFloat(product.discount[0].value);
+        };
+        const coupons = await collections.coupons().find({
+          $or: [
+            { productId: new ObjectId(product._id), status: true },
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        }).toArray();
+
+        let couponAmount = 0;
+        if (coupons.length > 0) {
+          coupons.forEach((coupon) => {
+            if (parseFloat(coupon.percent) > 0) {
+              couponAmount += (parseFloat(coupon.percent) / 100) *
+                (product.price + parseFloat(product.shippingFee ?? 0) + platformFee - discount);
+            } else {
+              couponAmount += parseFloat(coupon.amount || 0);
+            }
+          });
+        };
+        product.coupon = couponAmount;
+        product.platformFee = platformFee;
+        if (product.images && product.images.length > 0) {
+          try {
             product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+          } catch (err) {
+            console.error(`Error reading image ${imgPath}:`, err);
+            product.images = [];
           }
-          return product;
-        })
-      );
+        }
+
+        return product;
+      }));
+
       if (allProducts.length > 0) {
         return { ...fetched("Latest Products"), data: allProducts };
       } else {
         return tryAgain;
       }
+
     } catch (err) {
+      console.error("Error fetching latest products:", err);
       return { ...serverError, err };
     }
   }
+
 
   // find popular products
   async getPopularProducts(req) {
     try {
       const orderedProducts = await collections.orders().distinct("productId");
+
       let existingOrderedProducts = [];
       let remainingProducts = [];
 
@@ -312,20 +354,49 @@ class Products {
       } else {
         remainingProducts = await collections.products().find({}).toArray();
       }
+
       let allProducts = [...existingOrderedProducts, ...remainingProducts];
-      allProducts = await Promise.all(
-        allProducts.map(async (product) => {
-          if (product.images && product.images.length > 0) {
-            try {
-              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
-            } catch (err) {
-              console.error(`Error reading image ${imgPath}:`, err);
-              product.images = [];
+      const settings = await collections.settings().findOne({ type: "platformFee" });
+      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
+      allProducts = await Promise.all(allProducts.map(async (product) => {
+        let discount = 0;
+        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+          discount = product.discount[0].type === "percentage"
+            ? parseFloat(product.price * (product.discount[0].value / 100))
+            : parseFloat(product.discount[0].value);
+        }
+        const coupons = await collections.coupons().find({
+          $or: [
+            { productId: new ObjectId(product._id), status: true },
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        }).toArray();
+
+        let couponAmount = 0;
+        if (coupons.length > 0) {
+          coupons.forEach((coupon) => {
+            if (parseFloat(coupon.percent) > 0) {
+              couponAmount += (parseFloat(coupon.percent) / 100) *
+                (product.price + (product.shippingFee ?? 0) + platformFee - discount);
+            } else {
+              couponAmount += parseFloat(coupon.amount || 0);
             }
+          });
+        }
+        product.coupon = couponAmount;
+        product.platformFee = platformFee;
+        if (product.images && product.images.length > 0) {
+          try {
+            product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+          } catch (err) {
+            console.error(`Error reading image ${imgPath}:`, err);
+            product.images = [];
           }
-          return product;
-        })
-      );
+        }
+
+        return product;
+      }));
 
       return { status: 200, message: "Popular products retrieved", data: allProducts };
 
@@ -334,6 +405,7 @@ class Products {
       return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
+
 
   // wishlist product
   async getWishlistProducts(req) {
@@ -354,19 +426,51 @@ class Products {
       let likedProducts = await collections.products().find({
         _id: { $in: user.likedProducts.map(id => new ObjectId(id)) }
       }).toArray();
-      likedProducts = await Promise.all(
-        likedProducts.map(async (product) => {
-          if (product.images && product.images.length > 0) {
-            try {
-              product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
-            } catch (err) {
-              console.error(`Error reading image ${imgPath}:`, err);
-              product.images = [];
+
+      if (likedProducts.length === 0) {
+        return notFound("Wishlist products");
+      }
+      const settings = await collections.settings().findOne({ type: "platformFee" });
+      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
+      likedProducts = await Promise.all(likedProducts.map(async (product) => {
+        let discount = 0;
+        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
+          discount = product.discount[0].type === "percentage"
+            ? parseFloat(product.price * (product.discount[0].value / 100))
+            : parseFloat(product.discount[0].value);
+        }
+        const coupons = await collections.coupons().find({
+          $or: [
+            { productId: new ObjectId(product._id), status: true },
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        }).toArray();
+
+        let couponAmount = 0;
+        if (coupons.length > 0) {
+          coupons.forEach((coupon) => {
+            if (parseFloat(coupon.percent) > 0) {
+              couponAmount += (parseFloat(coupon.percent) / 100) *
+                (product.price + (product.shippingFee ?? 0) + platformFee - discount);
+            } else {
+              couponAmount += parseFloat(coupon.amount || 0);
             }
+          });
+        }
+        product.coupon = couponAmount;
+        product.platformFee = platformFee;
+        if (product.images && product.images.length > 0) {
+          try {
+            product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+          } catch (err) {
+            console.error(`Error reading image ${imgPath}:`, err);
+            product.images = [];
           }
-          return product;
-        })
-      );
+        }
+
+        return product;
+      }));
 
       return { status: 200, message: "Liked products retrieved", data: likedProducts };
 
@@ -375,6 +479,7 @@ class Products {
       return { status: 500, message: "Internal Server Error", error: err.toString() };
     }
   }
+
 
 
 
