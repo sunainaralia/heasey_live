@@ -64,6 +64,8 @@ const collections = {
     distribution: () => client.db(process.env.MONGO_DATABASE).collection("distribuiton"),
     // transaction collection
     transactions: () => client.db(process.env.MONGO_DATABASE).collection("transactions"),
+    // product review collection 
+    productReview: () => client.db(process.env.MONGO_DATABASE).collection("productReview"),
 }
 
 export default collections;

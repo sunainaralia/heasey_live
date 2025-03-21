@@ -28,9 +28,6 @@ class UserModel {
         canLogin,
         address,
         likedProducts,
-        state,
-        pinCode,
-        city
     ) {
         this._id = _id;
         this.fullName = fullName;
@@ -60,9 +57,6 @@ class UserModel {
         this.canLogin = canLogin;
         this.address = address;
         this.likedProducts = likedProducts;
-        this.state = state;
-        this.pinCode = pinCode;
-        this.city = city
     }
 
     fromJson(jsonData) {
@@ -94,10 +88,7 @@ class UserModel {
             jsonData.updatedAt ?? new Date(),
             jsonData.canLogin ?? false,
             jsonData.address ?? "",
-            jsonData.likedProducts ?? [],
-            jsonData.state ?? "",
-            jsonData.pinCode ?? "",
-            jsonData.city ?? ""
+            jsonData.likedProducts ?? []
 
         );
     }
@@ -134,9 +125,6 @@ class UserModel {
             canLogin: this.canLogin,
             address: this.address,
             likedProducts: this.likedProducts,
-            state: this.state,
-            pinCode: this.pinCode,
-            city: this.city,
 
         };
     }
@@ -169,9 +157,6 @@ class UserModel {
             canLogin: this.canLogin,
             address: this.address,
             likedProducts: this.likedProducts,
-            state: this.state,
-            pinCode: this.pinCode,
-            city: this.city,
 
         };
     }
@@ -193,9 +178,6 @@ class UserModel {
             canLogin: e.canLogin,
             address: e.address,
             likedProducts: e.likedProducts,
-            state: e.state,
-            pinCode: e.pinCode,
-            city: e.city,
         };
     }
 

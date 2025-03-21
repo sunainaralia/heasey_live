@@ -190,7 +190,7 @@ class Users {
 
       if (!result) {
         const msg = invalidId("User");
-        return res.status(msg.status).send(msg);
+        return msg;
       }
       const user = new UserModel().fromJson(result);
 
@@ -203,7 +203,7 @@ class Users {
       if (!isPasswordCorrect) {
         await collections.users().updateOne({ _id: user._id }, { $inc: { attempt: -1 } });
         const message = invalidLoginCred(user.attempt - 1);
-        return res.status(message.status).send(message);
+        return message;
       }
 
       // Password is correct

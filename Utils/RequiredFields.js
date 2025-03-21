@@ -89,7 +89,7 @@ export const reqFields = {
         "type",
         "size"
     ],
-    review: [ "review", "productId"],
+    review: ["review", "productId"],
     order: [
         "userId",
         "productId"
@@ -113,11 +113,15 @@ export const reqFields = {
         "userId",
         "products"
     ],
-    rating:[
+    rating: [
         "productId",
         "rating"
     ], distribution: [
         "adminId", "rate", "level"
     ],
     transactions: ["amount", "type"],
+    productReview: [
+        "userId",
+        "review",
+        "rating"]
 };

@@ -1,4 +1,4 @@
-class KycModel {
+class KycDetailsModel {
     constructor(
         id,
         userId,
@@ -38,7 +38,7 @@ class KycModel {
     }
 
     fromJson(jsonData) {
-        return new KycModel(
+        return new KycDetailsModel(
             jsonData._id ?? null,
             jsonData.userId ?? "",
             jsonData.bankName ?? "",
@@ -107,4 +107,4 @@ class KycModel {
 
 }
 
-export default KycModel;
+export default KycDetailsModel;
