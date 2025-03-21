@@ -18,7 +18,7 @@ import cartRoutes from "./Routes/Cart.js";
 import ratingRoutes from "./Routes/Ratings.js";
 import distributionRoutes from "./Routes/Distribution.js";
 import transactionRoutes from "./Routes/Transactions.js";
-import productReviewRoutes from "./Routes/ProductReview.js";
+import appReviewRoutes from "./Routes/AppReview.js"
 import path from "path";
 import { fileURLToPath } from "url";
 import { urlNotFound } from "./Utils/Messages.js";
@@ -52,7 +52,7 @@ app.use("/api/v1/", cartRoutes);
 app.use("/api/v1/", ratingRoutes);
 app.use("/api/v1/", distributionRoutes);
 app.use("/api/v1/", transactionRoutes);
-app.use("/api/v1/", productReviewRoutes)
+app.use("/api/v1/", appReviewRoutes)
 // handling the error when no routes are found
 app.all("*", (req, res, next) => {
   res.status(404).send(urlNotFound);

@@ -120,7 +120,7 @@ export const reqFields = {
         "adminId", "rate", "level"
     ],
     transactions: ["amount", "type"],
-    productReview: [
+    appReview: [
         "userId",
         "review",
         "rating"]

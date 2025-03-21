@@ -8,19 +8,19 @@ import {
   tryAgain,
   deleted
 } from "../Utils/Messages.js";
-import ProductReviewModel from "../Models/ProductReview.js";
+import AppReviewModel from "../Models/AppReview.js";
 import collections from "../Utils/Collection.js";
 
-const productReviewModel = new ProductReviewModel();
+const appReviewModel = new AppReviewModel();
 
-class ProductReview {
+class AppReview {
   constructor() { }
 
   // Get all product reviews with pagination
   async getReviews(page, limit) {
     let skip = parseInt(page) * limit;
     try {
-      let result = await collections.productReview().find({}).skip(skip).limit(limit).toArray();
+      let result = await collections.appReview().find({}).skip(skip).limit(limit).toArray();
       return result.length > 0 ? { ...fetched("Reviews"), data: result } : tryAgain;
     } catch (err) {
       return { ...serverError, err };
@@ -30,7 +30,7 @@ class ProductReview {
   // Get review by ID
   async getReviewById(id) {
     try {
-      const result = await collections.productReview().findOne({ _id: new ObjectId(id) });
+      const result = await collections.appReview().findOne({ _id: new ObjectId(id) });
       return result ? { ...fetched("Review"), data: result } : InvalidId("Review");
     } catch (err) {
       return { ...serverError, err };
@@ -39,9 +39,9 @@ class ProductReview {
 
   // Create new review
   async createReview(body) {
-    const review = productReviewModel.fromJson(body);
+    const review = appReviewModel.fromJson(body);
     try {
-      const result = await collections.productReview().insertOne(review.toDatabaseJson());
+      const result = await collections.appReview().insertOne(review.toDatabaseJson());
       console.log(result)
       return result?.insertedId
         ? { ...columnCreated("Review"), data: { id: result.insertedId } }
@@ -56,8 +56,8 @@ class ProductReview {
   async updateReviewById(body) {
     try {
       const { id } = body;
-      const updateData = productReviewModel.toUpdateJson(body);
-      const result = await collections.productReview().updateOne(
+      const updateData = appReviewModel.toUpdateJson(body);
+      const result = await collections.appReview().updateOne(
         { _id: new ObjectId(id) },
         { $set: { ...updateData } }
       );
@@ -72,7 +72,7 @@ class ProductReview {
   // Delete review by ID
   async deleteReviewById(id) {
     try {
-      const result = await collections.productReview().deleteOne({ _id: new ObjectId(id) });
+      const result = await collections.appReview().deleteOne({ _id: new ObjectId(id) });
       return result.deletedCount > 0 ? { ...deleted("Review") } : InvalidId("Review");
     } catch (err) {
       return { ...serverError, err };
@@ -80,4 +80,4 @@ class ProductReview {
   }
 }
 
-export default ProductReview;
+export default AppReview;

@@ -1,4 +1,4 @@
-class ProductReviewModel {
+class AppReviewModel {
   constructor(
     id,
     userId,
@@ -20,7 +20,7 @@ class ProductReviewModel {
   }
 
   fromJson(jsonData) {
-    return new ProductReviewModel(
+    return new AppReviewModel(
       jsonData._id ?? null,
       jsonData.userId ?? "",
       jsonData.review ?? "",
@@ -76,4 +76,4 @@ class ProductReviewModel {
 
 }
 
-export default ProductReviewModel;
+export default AppReviewModel;
