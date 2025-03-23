@@ -121,7 +121,7 @@ class Cart {
   async getCartItems(userId) {
     try {
       let cartItems = await collections.cart().find({ userId: userId.toString() }).toArray();
-
+      let user=await collections.users().findOne({_id:new ObjectId(userId)});
       if (!cartItems || cartItems.length === 0) {
         return notFound("Cart");
       }
@@ -216,7 +216,9 @@ class Cart {
           shippingFee: parseFloat(shippingFees.toFixed(2)),
           platformFee: parseFloat(platformFees.toFixed(2)),
           finalAmount: parseFloat(amountToPay.toFixed(2)),
-          appliedCoupans: [...coupons, ...checkCoupan]
+          appliedCoupans: [...coupons, ...checkCoupan],
+          userName: user.fullName,
+          phoneNo: user.phone
         }
       };
 

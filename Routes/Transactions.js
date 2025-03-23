@@ -48,7 +48,26 @@ routes.post(
     }
   }
 );
-
+// confirm order
+routes.post(
+  "/confirm-order",
+  authController.verifyToken,
+  authController.checkFields(["userId", "paymentMethod", "amount", "orderId"]),
+  async (req, res) => {
+    try {
+      const result = await usertrans.confimOrder({
+        ...req.body,
+      });
+      return res.status(result.status).send(result);
+    } catch (err) {
+      console.log(err);
+      return res.status(serverError.status).send({
+        ...serverError,
+        err,
+      });
+    }
+  }
+);
 // Withdraw transaction API
 // routes.post(
 //   "/withdraw",

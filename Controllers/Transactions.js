@@ -398,7 +398,7 @@ class UserTrans extends Notifications {
       }
       session.endSession();
     }
-  }
+  };
 
   // pay through wallet 
   async payFromWallet(req) {
@@ -501,6 +501,124 @@ class UserTrans extends Notifications {
         sessionActive = false;
       }
 
+      return serverError;
+    } finally {
+      if (sessionActive) {
+        console.warn("Session was not closed properly. Aborting transaction.");
+        try {
+          await session.abortTransaction();
+        } catch (error) {
+          console.error("Error aborting transaction in finally:", error);
+        }
+      }
+      session.endSession();
+    }
+  };
+  // cash on delivery
+  async confimOrder(body) {
+    const session = client.startSession();
+    let sessionActive = false;
+    try {
+      await session.startTransaction();
+      sessionActive = true;
+      const [user, taxConfig, invoiceNo] = await Promise.all([
+        collections.users().findOne({ _id: new ObjectId(body?.userId) }, { session }),
+        collections.settings().findOne({ type: "tax-config" }, { session }),
+        collections.transactions().countDocuments({}, { session })
+      ]);
+
+      if (!user || !taxConfig) {
+        console.warn("Error: Required data not found.");
+        await session.abortTransaction();
+        sessionActive = false;
+        return tryAgain;
+      };
+      const taxRate = parseInt(taxConfig?.value ?? 0);
+      const transactionAmount = parseFloat(body.amount ?? 0);
+      if (transactionAmount <= 0) {
+        await session.abortTransaction();
+        sessionActive = false;
+        return tryAgain;
+      };
+      const newTransaction = new UserTransactionModel(
+        null,
+        body?.userId,
+        transactionAmount,
+        taxRate,
+        "",
+        "",
+        `hea|${invoiceNo + 1}`,
+        true,
+        body.paymentMethod,
+        new Date(),
+        new Date()
+      );
+
+      const result = await collections.transactions().insertOne(newTransaction.toDatabaseJson(), { session });
+
+      if (!result || !result.insertedId) {
+        console.warn("Error: Transaction insertion failed.");
+        await session.abortTransaction();
+        sessionActive = false;
+        return tryAgain;
+      };
+      const order = await collections.orders().findOne(
+        {
+          _id: new ObjectId(body.orderId),
+          status: false,
+          type: "pending"
+        },
+        { session }
+      );
+
+      if (!order) {
+        await session.abortTransaction();
+        sessionActive = false;
+        return notFound("Order");
+      }
+      console.log(order.amount, body.amount)
+      if (parseInt(order.amount) !== parseInt(body.amount)) {
+        await session.abortTransaction();
+        sessionActive = false;
+        return tryAgain;
+      }
+      const updateOrder = await collections.orders().findOneAndUpdate(
+        { _id: new ObjectId(body.orderId) },
+        { $set: { status: true, type: "confirmed", transactionId: result.insertedId.toString() } },
+        { session, returnDocument: "after" }
+      );
+
+      if (!updateOrder) {
+        await session.abortTransaction();
+        sessionActive = false;
+        return serverError;
+      }
+
+      let emailOptions = options(
+        user.email,
+        "Heasey Wallet Credit Successful",
+        transaction(user?._id, newTransaction.amount, result?.insertedId, user?.fullName)
+      );
+
+      await sendMail(emailOptions);
+      await session.commitTransaction();
+      sessionActive = false;
+
+      return {
+        ...columnCreated("Transaction"),
+        data: { id: result.insertedId }
+      };
+
+    } catch (error) {
+      console.error("Error in createTransaction:", error);
+      if (sessionActive) {
+        try {
+          await session.abortTransaction();
+        } catch (abortError) {
+          console.error("Error aborting transaction:", abortError);
+        }
+        sessionActive = false;
+      }
       return serverError;
     } finally {
       if (sessionActive) {
