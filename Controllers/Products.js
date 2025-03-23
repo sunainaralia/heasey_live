@@ -41,7 +41,20 @@ class Products {
         if (product.images && product.images.length > 0) {
           product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
         };
-
+        if (product.reviews && product.reviews.length > 0) {
+          product.reviews = await Promise.all(
+            product.reviews.map(reviewId =>
+              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
+        if (product.ratings && product.ratings.length > 0) {
+          product.ratings = await Promise.all(
+            product.ratings.map(reviewId =>
+              collections.rating().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
         return product;
       }));
 
@@ -64,6 +77,20 @@ class Products {
             if (product.images && product.images.length > 0) {
               product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
             }
+            if (product.reviews && product.reviews.length > 0) {
+              product.reviews = await Promise.all(
+                product.reviews.map(reviewId =>
+                  collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+                )
+              );
+            };
+            if (product.ratings && product.ratings.length > 0) {
+              product.ratings = await Promise.all(
+                product.ratings.map(reviewId =>
+                  collections.rating().findOne({ _id: new ObjectId(reviewId) })
+                )
+              );
+            };
             return product;
           })
         );
@@ -271,11 +298,26 @@ class Products {
         if (product.images && product.images.length > 0) {
           try {
             product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
+
           } catch (err) {
             console.error(`Error reading image ${imgPath}:`, err);
             product.images = [];
           }
         }
+        if (product.reviews && product.reviews.length > 0) {
+          product.reviews = await Promise.all(
+            product.reviews.map(reviewId =>
+              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
+        if (product.ratings && product.ratings.length > 0) {
+          product.ratings = await Promise.all(
+            product.ratings.map(reviewId =>
+              collections.rating().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
         return product;
       }));
 
@@ -321,6 +363,20 @@ class Products {
             product.images = [];
           }
         }
+        if (product.reviews && product.reviews.length > 0) {
+          product.reviews = await Promise.all(
+            product.reviews.map(reviewId =>
+              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
+        if (product.ratings && product.ratings.length > 0) {
+          product.ratings = await Promise.all(
+            product.ratings.map(reviewId =>
+              collections.rating().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
 
         return product;
       }));
@@ -364,6 +420,20 @@ class Products {
             console.error(`Error reading image ${imgPath}:`, err);
             product.images = [];
           }
+        };
+        if (product.reviews && product.reviews.length > 0) {
+          product.reviews = await Promise.all(
+            product.reviews.map(reviewId =>
+              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
+        };
+        if (product.ratings && product.ratings.length > 0) {
+          product.ratings = await Promise.all(
+            product.ratings.map(reviewId =>
+              collections.rating().findOne({ _id: new ObjectId(reviewId) })
+            )
+          );
         };
         return product;
       }));
