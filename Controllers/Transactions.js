@@ -314,7 +314,7 @@ class UserTrans extends Notifications {
         collections.transactions().countDocuments({}, { session })
       ]);
 
-      if (!user || !taxConfig || invoiceNo == null) {
+      if (!user || !taxConfig) {
         console.warn("Error: Required data not found.");
         await session.abortTransaction();
         sessionActive = false;
@@ -404,7 +404,6 @@ class UserTrans extends Notifications {
   async payFromWallet(req) {
     const session = client.startSession();
     let sessionActive = false;
-
     try {
       await session.startTransaction();
       sessionActive = true;
@@ -515,7 +514,6 @@ class UserTrans extends Notifications {
       session.endSession();
     }
   }
-
 
 
 }

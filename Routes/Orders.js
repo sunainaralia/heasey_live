@@ -11,7 +11,7 @@ const orderController = new Order();
 const authController = new Auth();
 
 // Get All Orders with Pagination
-routes.get("/orders", authController.verifyToken, async (req, res) => {
+routes.get("/orders", authController.verifyToken,authController.checkAuth, async (req, res) => {
   try {
     const page = parseInt(req.query.page) || 0;
     const limit = parseInt(req.query.limit) || 10;
@@ -74,7 +74,23 @@ routes.get(
     }
   }
 );
-
+// Get Order by userID
+routes.get(
+  "/orders/:id",
+  authController.verifyToken,
+  authController.CheckObjectId,
+  async (req, res) => {
+    try {
+      const result = await orderController.getOrderByUserId(req.params.id);
+      res.status(result.status).send(result);
+    } catch (error) {
+      return res.status(serverError.status).send({
+        ...serverError,
+        error,
+      });
+    }
+  }
+);
 // Update Order
 routes.put(
   "/orders/:id",

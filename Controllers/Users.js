@@ -649,12 +649,11 @@ class Users {
       if (!order) return tryAgain;
 
       const amount = order?.amount;
-      const [user, gstSetting, distributions, tdsSetting, convienceSetting, minPurchase] = await Promise.all([
+      const [user, distributions, tdsSetting, convienceSetting, minPurchase] = await Promise.all([
         collections.users().findOne(
           { _id: new ObjectId(order?.userId) },
           { session }
         ),
-        collections.settings().findOne({ type: "gst" }),
         collections.distribution().find({ status: true }).sort({ level: 1 }).toArray(),
         collections.settings().findOne({ type: "tds" }),
         collections.settings().findOne({ type: "convenience" }),
@@ -662,7 +661,7 @@ class Users {
       ]);
 
       let gst = 0, convenience = 0, tds = 0, minimumPurchase = parseInt(minPurchase.value) ?? 7000;
-      if (gstSetting?.value) gst = (amount * gstSetting.value) / 100;
+      gst = order?.taxValue;
       const amountAfterGst = amount - gst;
 
       if (tdsSetting?.value) {

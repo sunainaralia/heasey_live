@@ -2,14 +2,12 @@ class OrdersModel {
     constructor(
         id,
         userId,
-        title,
-        productId,
+        products,
         type,
         status,
         amount,
         discount,
         image,
-        vendorId,
         createdAt,
         updatedAt,
         orderId,
@@ -18,19 +16,19 @@ class OrdersModel {
         platformFee,
         price,
         transactionId,
-        sponsorId
+        sponsorId,
+        couponAmount,
+        taxValue
 
     ) {
         this.id = id;
         this.userId = userId;
-        this.title = title;
-        this.productId = productId;
+        this.products = products;
         this.type = type;
         this.status = status;
         this.amount = amount;
         this.discount = discount;
         this.image = image;
-        this.vendorId = vendorId;
         this.createdAt = createdAt;
         this.updatedAt = updatedAt;
         this.orderId = orderId;
@@ -39,21 +37,21 @@ class OrdersModel {
         this.platformFee = platformFee;
         this.price = price;
         this.transactionId = transactionId;
-        this.sponsorId = sponsorId
+        this.sponsorId = sponsorId;
+        this.couponAmount = couponAmount;
+        this.taxValue = taxValue
     }
 
     fromJson(jsonData) {
         return new OrdersModel(
             jsonData.id ?? null,
             jsonData.userId,
-            jsonData.title,
-            jsonData.productId,
+            jsonData.products ?? [],
             jsonData.type,
             jsonData.status ?? false,
             jsonData.amount,
             jsonData.discount,
             jsonData.image,
-            jsonData.vendorId,
             jsonData.createdAt ?? new Date(),
             jsonData.updatedAt ?? new Date(),
             jsonData.orderId ?? "",
@@ -62,7 +60,9 @@ class OrdersModel {
             jsonData.platformFee ?? 0,
             jsonData.price ?? 0,
             jsonData.transactionId ?? "",
-            jsonData.sponsorId ?? ""
+            jsonData.sponsorId ?? "",
+            jsonData.couponAmount ?? 0,
+            jsonData.taxValue ?? 0
         );
     }
 
@@ -71,14 +71,12 @@ class OrdersModel {
     toDatabaseJson() {
         return {
             userId: this.userId,
-            title: this.title,
-            productId: this.productId,
+            products: this.products,
             type: this.type,
             status: this.status,
             amount: this.amount,
             discount: this.discount,
             image: this.image,
-            vendorId: this.vendorId,
             createdAt: this.createdAt,
             updatedAt: this.updatedAt,
             orderId: this.orderId,
@@ -87,7 +85,9 @@ class OrdersModel {
             platformFee: this.platformFee,
             price: this.price,
             transactionId: this.transactionId,
-            sponsorId: this.sponsorId
+            sponsorId: this.sponsorId,
+            couponAmount: this.couponAmount,
+            taxValue: this.taxValue
         };
     }
 

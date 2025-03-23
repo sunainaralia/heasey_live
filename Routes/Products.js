@@ -105,7 +105,7 @@ routes.post(
 routes.get("/products/:id", authController.verifyToken, async (req, res) => {
   try {
     const result = await products.getProductById(req.params.id);
-    res.status(result.status).send(result);
+    return res.status(result.status).send(result);
   } catch (error) {
     return res.status(serverError.status).send({
       ...serverError

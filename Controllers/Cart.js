@@ -1,7 +1,7 @@
 import CartModel from "../Models/Cart.js";
 import collections from "../Utils/Collection.js";
 import { ObjectId } from "mongodb";
-import { updateCartFailed, failedToCreate, columnUpdated, serverError, notFound, updateProductQuantity, productRemoved } from "../Utils/Messages.js";
+import { updateCartFailed, failedToCreate, columnUpdated, serverError, notFound, updateProductQuantity, productRemoved, fetched } from "../Utils/Messages.js";
 class Cart {
   // Add product to the cart
   async addToCart({ userId, products }) {
@@ -126,6 +126,13 @@ class Cart {
         return notFound("Cart");
       }
 
+      let totalPrice = 0;
+      let totalTaxValue = 0;
+      let totalDiscountValue = 0;
+      let totalCoupanValue = 0;
+      let appliedCoupons = [];
+      let coupons;
+
       const cartItemsWithProducts = await Promise.all(
         cartItems.map(async (cart) => {
           let product = await collections.products().findOne({ _id: new ObjectId(cart.productId) });
@@ -133,38 +140,35 @@ class Cart {
           if (!product) {
             return { ...cart, productDetails: null };
           }
-
-          // Fetch platform fee
-          const settings = await collections.settings().findOne({ type: "platformFee" });
-          let platformFees = settings?.value ? parseFloat(settings.value) : 0;
-
-          // Fetch applicable coupons
-          const coupons = await collections.coupons().find({
-            $or: [{ productId: new ObjectId(cart.productId), status: true }, { productId: null, status: true }, { productId: "", status: true }]
-          }).toArray();
-
-          // Calculate discount
-          let discount = 0;
-          if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-            discount = product.discount[0].type === "percentage"
-              ? parseFloat(product.price * (product.discount[0].value / 100))
-              : parseFloat(product.discount[0].value);
+          if (product.images && product.images.length > 0) {
+            product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
           }
 
-          // Calculate coupon discount
-          let amount = 0;
-          coupons.forEach((coupon) => {
-            if (parseFloat(coupon.percent) > 0) {
-              amount += (parseFloat(coupon.percent) / 100) * (product.price + product.shippingFee + platformFees - discount);
-            } else {
-              amount += parseFloat(coupon.amount || 0);
-            }
-          });
+          let price = product.price * cart.quantity;
+          let taxValue = ((product.price * product.tax) / 100) * cart.quantity;
+          let discountValue = product.discountValue * cart.quantity;
 
-          // Set product.coupon AFTER loop
-          product.coupon = amount;
+          totalPrice += price;
+          totalTaxValue += taxValue;
+          totalDiscountValue += discountValue;
 
-          console.log("Coupon for product:", product._id, "=>", product.coupon);
+          coupons = await collections.coupons().find(
+            { productId: cart.productId, status: true }
+          ).toArray();
+
+          if (coupons.length > 0) {
+            coupons.forEach((coupon) => {
+              appliedCoupons.push(coupon._id.toString());
+              if (parseFloat(coupon.percent) > 0) {
+                totalCoupanValue += (parseFloat(coupon.percent) / 100) * (product.finalPrice * cart.quantity);
+              } else {
+                totalCoupanValue += parseFloat(coupon.amount || 0);
+              }
+            });
+          }
+
+          product.finalPrice = product.finalPrice * cart.quantity;
+          product.discountValue = product.discountValue * cart.quantity;
 
           return {
             ...cart,
@@ -173,10 +177,49 @@ class Cart {
         })
       );
 
+      const amountBeforeGenCoupon = totalPrice + totalTaxValue - totalDiscountValue - totalCoupanValue;
+
+      const checkCoupan = await collections.coupons()
+        .find({
+          $or: [
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        })
+        .toArray();
+
+      let appliedCoupan = 0;
+
+      if (checkCoupan.length > 0) {
+        checkCoupan.forEach((coupan) => {
+          appliedCoupons.push(coupan._id.toString());
+          appliedCoupan += coupan.type === "percentage"
+            ? parseFloat(amountBeforeGenCoupon * (coupan.percent / 100))
+            : parseFloat(coupan.amount ?? 0);
+        });
+      }
+
+      const platformSettings = await collections.settings().findOne({ type: "platformFee" });
+      const shippingSettings = await collections.settings().findOne({ type: "shippingFee" });
+
+      const shippingFees = parseFloat(shippingSettings?.value || 0);
+      const platformFees = parseFloat(platformSettings?.value || 0);
+
+      let amountToPay = Math.max(0, amountBeforeGenCoupon - appliedCoupan + shippingFees + platformFees);
       return {
-        status: 200,
-        data: cartItemsWithProducts,
+        ...fetched("cart"),
+        data: {
+          products: cartItemsWithProducts,
+          totalPrice: parseFloat(totalPrice.toFixed(2)),
+          totalDiscount: parseFloat(totalDiscountValue.toFixed(2)),
+          totalCoupon: parseFloat((totalCoupanValue + appliedCoupan).toFixed(2)),
+          shippingFee: parseFloat(shippingFees.toFixed(2)),
+          platformFee: parseFloat(platformFees.toFixed(2)),
+          finalAmount: parseFloat(amountToPay.toFixed(2)),
+          appliedCoupans: [...coupons, ...checkCoupan]
+        }
       };
+
     } catch (error) {
       console.error("Error in getCartItems:", error);
       return serverError;
@@ -184,24 +227,19 @@ class Cart {
   }
 
 
-  // Get cart summary (total quantity and price)
+  // Get cart summary 
   async getCartSummary() {
     try {
       const carts = await collections.cart().find({}).toArray();
-
       if (!carts || carts.length === 0) {
         return notFound("Cart");
-      }
-
-      return {
-        status: 200,
-        data: carts,
       };
+      return { ...fetched("Cart Details"), data: carts };
     } catch (error) {
       console.error("Error in getCartSummary:", error);
       return serverError;
     }
   }
-}
+};
 
 export default Cart;

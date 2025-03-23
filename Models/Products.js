@@ -15,8 +15,9 @@ class ProductsModel {
         price,
         reviews,
         ratings,
-        shippingFee,
-        platformFee,
+        tax,
+        finalPrice,
+        discountValue
     ) {
         this.id = id;
         this.title = title;
@@ -33,8 +34,9 @@ class ProductsModel {
         this.price = price;
         this.reviews = reviews;
         this.ratings = ratings;
-        this.shippingFee = shippingFee;
-        this.platformFee = platformFee;
+        this.tax = tax;
+        this.finalPrice = finalPrice;
+        this.discountValue = discountValue
     }
 
     fromJson(jsonData) {
@@ -54,8 +56,9 @@ class ProductsModel {
             jsonData.price ?? 0,
             jsonData.reviews ?? [],
             jsonData.ratings ?? [],
-            jsonData.shippingFee ?? 0,
-            jsonData.platformFee ?? 0,
+            jsonData.tax ?? 0,
+            jsonData.finalPrice ?? 0,
+            jsonData.discountValue ?? 0
         );
     }
 
@@ -75,8 +78,9 @@ class ProductsModel {
             price: this.price,
             reviews: this.reviews,
             ratings: this.ratings,
-            shippingFee: this.shippingFee,
-            platformFee: this.platformFee,
+            tax: this.tax,
+            finalPrice: this.finalPrice,
+            discountValue: this.discountValue
         };
     }
 

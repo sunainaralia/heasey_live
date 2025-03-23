@@ -7,12 +7,8 @@ import {
   serverError,
   tryAgain,
   deleted,
-  noAddress,
-  kycDone,
   notExist,
   kycExist,
-  accountCreated,
-  subAccCreated,
   kycRejected,
   unauthorized,
   kycRequired,
@@ -94,11 +90,11 @@ class KycDetail extends Users {
       });
 
       if (countKyc > 0) {
-        return kycExist; // KYC already exists
+        return kycExist; 
       }
 
       // Create new KYC entry
-      const add = kycDetail.fromJson(body); // Convert incoming data to model
+      const add = kycDetail.fromJson(body); 
       const result = await collections.kycCollection().insertOne(add.toDatabaseJson());
 
       if (result && result.insertedId) {
@@ -149,7 +145,7 @@ class KycDetail extends Users {
       fs.writeFileSync(signFilePath, sign.buffer);
 
       const result = await collections.kycCollection().updateOne({ userId: userId }, { $set: { aadharFile: [aadharFrontPath, aadharBackPath], panFile: panFilePath, sign: signFilePath, status: false } });
-      const user = await collections.userCollection().findOne({ _id: new ObjectId(userId) })
+      const user = await collections.users().findOne({ _id: new ObjectId(userId) })
       if (result.modifiedCount > 0) {
         // let mailOption = options(
         //   user.email,
@@ -167,7 +163,6 @@ class KycDetail extends Users {
       return serverError;
     }
   }
-
 
   // get kyc details by user id 
   async getKycDetailByUserId(id) {

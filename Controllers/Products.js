@@ -37,45 +37,10 @@ class Products {
       if (products.length === 0) {
         return tryAgain;
       }
-      const settings = await collections.settings().findOne({ type: "platformFee" });
-      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
       products = await Promise.all(products.map(async (product) => {
-        let discount = 0;
-        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-          discount = product.discount[0].type === "percentage"
-            ? parseFloat(product.price * (product.discount[0].value / 100))
-            : parseFloat(product.discount[0].value);
-        }
-        const coupons = await collections.coupons().find({
-          $or: [
-            { productId: new ObjectId(product._id), status: true },
-            { productId: null, status: true },
-            { productId: "", status: true }
-          ]
-        }).toArray();
-
-        let couponAmount = 0;
-        if (coupons.length > 0) {
-          coupons.forEach((coupon) => {
-            if (parseFloat(coupon.percent) > 0) {
-              couponAmount += (parseFloat(coupon.percent) / 100) * (product.price + (product.shippingFee ?? 0) + platformFee - discount);
-            } else {
-              couponAmount += parseFloat(coupon.amount || 0);
-            }
-          });
-        }
-        product.coupon = couponAmount;
-        product.platformFee = platformFee;
         if (product.images && product.images.length > 0) {
           product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
         };
-        if (product.reviews && product.reviews.length > 0) {
-          product.reviews = await Promise.all(
-            product.reviews.map(reviewId =>
-              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
-            )
-          );
-        }
 
         return product;
       }));
@@ -114,9 +79,21 @@ class Products {
   // Create new Product
   async createProduct(body) {
     try {
-      const platformSettings = await collections.settings().findOne({ type: "platformFee" });
-      const platformFees = parseFloat(platformSettings?.value || 0);
-      const product = new ProductsModel(null, body.title, body.description, body.vendorId, body.categoryId, body.discount, [], body.quantity, body.sku, false, new Date(), new Date(), body.price, [], [], body.shippingFee, platformFees);
+      let price = body?.price || 0;
+      let tax = body?.tax || 0;
+      let discount = body?.discount;
+      let totalPrice = parseFloat(price + ((tax) * (price) / 100));
+      let totalDiscount = 0;
+      if (discount.length > 0) {
+        discount.map((discount) => {
+          if (discount.type == "percentage") {
+            totalDiscount += parseFloat((totalPrice * discount.value) / 100)
+          } else {
+            totalDiscount += parseFloat(discount.value)
+          }
+        })
+      };
+      const product = new ProductsModel(null, body.title, body.description, body.vendorId, body.categoryId, body.discount, [], body.quantity, body.sku, true, new Date(), new Date(), body.price, [], [], body.tax, parseInt(totalPrice - totalDiscount), parseFloat(totalDiscount));
       const result = await collections.products().insertOne(product.toDatabaseJson());
       return result?.insertedId
         ? { ...columnCreated("Product"), data: { id: result.insertedId } }
@@ -134,35 +111,38 @@ class Products {
       if (!result) {
         return InvalidId("Product Detail");
       }
-      const settings = await collections.settings().findOne({ type: "platformFee" });
-      let platformFees = settings?.value ? parseFloat(settings.value) : 0;
-
+      const platformSettings = await collections.settings().findOne({ type: "platformFee" });
+      const shippingSettings = await collections.settings().findOne({ type: "shippingFee" });
+      let platformFees = platformSettings?.value ? parseFloat(platformSettings.value) : 0;
+      let shippingFees = shippingSettings?.value ? parseFloat(shippingSettings.value) : 0;
       const coupons = await collections.coupons().find({
-        $or: [{ productId: new ObjectId(id), status: true }, { productId: null, status: true }, { productId: "", status: true }]
+        $or: [{ productId: id, status: true }, { productId: null, status: true }, { productId: "", status: true }]
       }).toArray();
-
-      let discount = 0;
-      if (result.discount && Array.isArray(result.discount) && result.discount.length > 0) {
-        discount = result.discount[0].type === "percentage"
-          ? parseFloat(result.price * (result.discount[0].value / 100))
-          : parseFloat(result.discount[0].value);
-      }
-
       let amount = 0;
       if (coupons.length > 0) {
         coupons.forEach((coupon) => {
           if (parseFloat(coupon.percent) > 0) {
-            amount += (parseFloat(coupon.percent) / 100) * (result.price + result.shippingFee + platformFees - discount);
+            amount += (parseFloat(coupon.percent) / 100) * (result.finalPrice);
           } else {
             amount += parseFloat(coupon.amount || 0);
           }
         });
-      }
-
-      result.coupon = amount;
+      };
+      result.coupon = coupons
+      result.couponAmount = amount;
+      result.shippingFees = shippingFees;
+      result.platformFees = platformFees;
+      result.orderAmount = parseInt(result.finalPrice + shippingFees + platformFees - amount);
       if (result.images && result.images.length > 0) {
         result.images = result.images.map((imgPath) => readFile(imgPath) ?? "");
-      }
+      };
+      if (result.reviews && result.reviews.length > 0) {
+        result.reviews = await Promise.all(
+          result.reviews.map(reviewId =>
+            collections.reviews().findOne({ _id: new ObjectId(reviewId) })
+          )
+        );
+      };
 
       return { ...fetched("Product"), data: result };
     } catch (err) {
@@ -274,8 +254,6 @@ class Products {
     thirtyDaysAgo.setDate(thirtyDaysAgo.getDate() - 30);
 
     try {
-      const settings = await collections.settings().findOne({ type: "platformFee" });
-      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
       let latestProducts = await collections.products()
         .find({ createdAt: { $gte: thirtyDaysAgo } })
         .sort({ createdAt: -1 })
@@ -290,33 +268,6 @@ class Products {
 
       let allProducts = [...latestProducts, ...remainingProducts];
       allProducts = await Promise.all(allProducts.map(async (product) => {
-        let discount = 0;
-        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-          discount = product.discount[0].type === "percentage"
-            ? parseFloat(product.price * (product.discount[0].value / 100))
-            : parseFloat(product.discount[0].value);
-        };
-        const coupons = await collections.coupons().find({
-          $or: [
-            { productId: new ObjectId(product._id), status: true },
-            { productId: null, status: true },
-            { productId: "", status: true }
-          ]
-        }).toArray();
-
-        let couponAmount = 0;
-        if (coupons.length > 0) {
-          coupons.forEach((coupon) => {
-            if (parseFloat(coupon.percent) > 0) {
-              couponAmount += (parseFloat(coupon.percent) / 100) *
-                (product.price + parseFloat(product.shippingFee ?? 0) + platformFee - discount);
-            } else {
-              couponAmount += parseFloat(coupon.amount || 0);
-            }
-          });
-        };
-        product.coupon = couponAmount;
-        product.platformFee = platformFee;
         if (product.images && product.images.length > 0) {
           try {
             product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
@@ -325,14 +276,6 @@ class Products {
             product.images = [];
           }
         }
-        if (product.reviews && product.reviews.length > 0) {
-          product.reviews = await Promise.all(
-            product.reviews.map(reviewId =>
-              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
-            )
-          );
-        }
-
         return product;
       }));
 
@@ -369,36 +312,7 @@ class Products {
       }
 
       let allProducts = [...existingOrderedProducts, ...remainingProducts];
-      const settings = await collections.settings().findOne({ type: "platformFee" });
-      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
       allProducts = await Promise.all(allProducts.map(async (product) => {
-        let discount = 0;
-        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-          discount = product.discount[0].type === "percentage"
-            ? parseFloat(product.price * (product.discount[0].value / 100))
-            : parseFloat(product.discount[0].value);
-        }
-        const coupons = await collections.coupons().find({
-          $or: [
-            { productId: new ObjectId(product._id), status: true },
-            { productId: null, status: true },
-            { productId: "", status: true }
-          ]
-        }).toArray();
-
-        let couponAmount = 0;
-        if (coupons.length > 0) {
-          coupons.forEach((coupon) => {
-            if (parseFloat(coupon.percent) > 0) {
-              couponAmount += (parseFloat(coupon.percent) / 100) *
-                (product.price + (product.shippingFee ?? 0) + platformFee - discount);
-            } else {
-              couponAmount += parseFloat(coupon.amount || 0);
-            }
-          });
-        }
-        product.coupon = couponAmount;
-        product.platformFee = platformFee;
         if (product.images && product.images.length > 0) {
           try {
             product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
@@ -406,13 +320,6 @@ class Products {
             console.error(`Error reading image ${imgPath}:`, err);
             product.images = [];
           }
-        }
-        if (product.reviews && product.reviews.length > 0) {
-          product.reviews = await Promise.all(
-            product.reviews.map(reviewId =>
-              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
-            )
-          );
         }
 
         return product;
@@ -448,37 +355,8 @@ class Products {
 
       if (likedProducts.length === 0) {
         return notFound("Wishlist products");
-      }
-      const settings = await collections.settings().findOne({ type: "platformFee" });
-      let platformFee = settings?.value ? parseFloat(settings.value) : 0;
+      };
       likedProducts = await Promise.all(likedProducts.map(async (product) => {
-        let discount = 0;
-        if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-          discount = product.discount[0].type === "percentage"
-            ? parseFloat(product.price * (product.discount[0].value / 100))
-            : parseFloat(product.discount[0].value);
-        }
-        const coupons = await collections.coupons().find({
-          $or: [
-            { productId: new ObjectId(product._id), status: true },
-            { productId: null, status: true },
-            { productId: "", status: true }
-          ]
-        }).toArray();
-
-        let couponAmount = 0;
-        if (coupons.length > 0) {
-          coupons.forEach((coupon) => {
-            if (parseFloat(coupon.percent) > 0) {
-              couponAmount += (parseFloat(coupon.percent) / 100) *
-                (product.price + (product.shippingFee ?? 0) + platformFee - discount);
-            } else {
-              couponAmount += parseFloat(coupon.amount || 0);
-            }
-          });
-        }
-        product.coupon = couponAmount;
-        product.platformFee = platformFee;
         if (product.images && product.images.length > 0) {
           try {
             product.images = product.images.map((imgPath) => readFile(imgPath) ?? "");
@@ -487,14 +365,6 @@ class Products {
             product.images = [];
           }
         };
-        if (product.reviews && product.reviews.length > 0) {
-          product.reviews = await Promise.all(
-            product.reviews.map(reviewId =>
-              collections.reviews().findOne({ _id: new ObjectId(reviewId) })
-            )
-          );
-        }
-
         return product;
       }));
 

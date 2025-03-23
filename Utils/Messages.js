@@ -337,4 +337,34 @@ export const productLiked = {
 export const productDisliked = {
     status: 200,
     message: "Product disliked successfully",
+};
+export const kycExist = {
+    status: 400,
+    message: "You are already verified or using registered user documents!"
+};
+export const kycRequired = {
+    status: 200,
+    message: "Your KYC has been Generated Successfully. Please Submit your Valid documents for Activation."
 }
+export const kycRejected = (name, userId) => {
+    return `
+  <!DOCTYPE html>
+  <html>
+      <body>
+          <p>Hello ${name},</p><br/><br/>
+          
+          <p>Hope this mail finds you well. This is to inform you that either your KYC has been expired or rejected. You will not be able to use your Heasey account until your KYC will be updated.</p>
+          <p>Heasey requests you to please resubmit your KYC with updated documents.</p>
+          <ul>
+            <li><strong>User ID:</strong> ${userId}</li>
+          </ul>
+          <p>If you have any questions or concerns in the meantime, please feel free to reach out to us. We're here to help!</p>
+          <br/>
+          <p>Thank you for choosing Heasey. We appreciate your patience and look forward to serving you.</p>
+          <br/>
+          <p>Best Regards,</p>
+          <p>The Heasey Team</p>
+      </body>
+  </html>
+  `;
+};

@@ -45,102 +45,137 @@ class Order {
       await session.startTransaction();
       sessionActive = true;
 
-      const product = await collections.products().findOne(
-        { _id: new ObjectId(body.productId) },
-        { session }
-      );
-      if (!product) {
-        await session.abortTransaction();
-        sessionActive = false;
-        return notFound("Product");
-      };
       const user = await collections.users().findOne({ _id: new ObjectId(body.userId) });
       if (!user) {
         await session.abortTransaction();
         sessionActive = false;
         return notFound("User");
-      };
-
-      const checkCoupan = await collections.coupons()
-        .find({
-          $or: [
-            { productId: new ObjectId(body.productId), status: true },
-            { productId: null, status: true },
-            { productId: "", status: true }
-          ]
-        }, { session })
-        .toArray();
-
-      const platformSettings = await collections.settings().findOne(
-        { type: "platformFee" },
-        { session }
-      );
-
-      const shippingFees = parseFloat(product?.shippingFees || 0);
-      const platformFees = parseFloat(platformSettings?.value || 0);
-      const productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
-      const price = product.price ?? 0;
-
-      let discount = 0;
-      if (product.discount && Array.isArray(product.discount) && product.discount.length > 0) {
-        discount = product.discount[0].type === "percentage"
-          ? parseFloat(price * (product.discount[0].value / 100))
-          : parseFloat(product.discount[0].value);
       }
 
-      let finalAmount = price + shippingFees + platformFees - discount;
-      let appliedCoupan = 0;
-      let appliedCoupons = [];
+      if (body?.products?.length > 0) {
+        let totalPrice = 0;
+        let totalTaxValue = 0;
+        let totalDiscountValue = 0;
+        let totalCoupanValue = 0;
+        let appliedCoupons = [];
+        let productImage;
+        for (const products of body.products) {
+          const product = await collections.products().findOne(
+            { _id: new ObjectId(products.productId) },
+            { session }
+          );
 
-      if (checkCoupan.length > 0) {
-        checkCoupan.forEach((coupan) => {
-          appliedCoupons.push(coupan._id.toString());
-          appliedCoupan += coupan.type === "percentage"
-            ? parseFloat(finalAmount * (coupan.percent / 100))
-            : parseFloat(coupan.amount ?? 0);
-        });
-      }
+          if (!product) {
+            await session.abortTransaction();
+            sessionActive = false;
+            return notFound("Product");
+          }
 
-      let amountToPay = Math.max(0, finalAmount - appliedCoupan);
+          productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
+          let price = product.price * products.quantity;
+          let taxValue = ((product.price * product.tax) / 100) * products.quantity;
+          let discountValue = product.discountValue * products.quantity;
 
-      const order = new OrdersModel(
-        null,
-        body.userId,
-        product.title,
-        body.productId,
-        body.type ?? "pending",
-        false,
-        amountToPay,
-        discount,
-        productImage,
-        product.vendorId,
-        new Date(),
-        new Date(),
-        body.orderId || "",
-        shippingFees,
-        appliedCoupons,
-        platformFees,
-        price,
-        "",
-        user.sponsorId.toString()
+          totalPrice += price;
+          totalTaxValue += taxValue;
+          totalDiscountValue += discountValue;
 
-      );
+          const coupons = await collections.coupons().find(
+            { productId: products.productId, status: true }
+          ).toArray();
 
-      const result = await collections.orders().insertOne(order.toDatabaseJson(), { session });
+          let amount = 0;
+          if (coupons.length > 0) {
+            coupons.forEach((coupon) => {
+              appliedCoupons.push(coupon._id.toString());
+              if (parseFloat(coupon.percent) > 0) {
+                amount += (parseFloat(coupon.percent) / 100) * (product.finalPrice * products.quantity);
+              } else {
+                amount += parseFloat(coupon.amount || 0);
+              }
+            });
+          }
 
-      if (!result || !result.insertedId) {
-        await session.abortTransaction();
+          totalCoupanValue += amount;
+        }
+
+        const amountBeforeGenCoupon = totalPrice + totalTaxValue - totalDiscountValue - totalCoupanValue;
+
+        const checkCoupan = await collections.coupons()
+          .find({
+            $or: [
+              { productId: null, status: true },
+              { productId: "", status: true }
+            ]
+          }, { session })
+          .toArray();
+
+        let appliedCoupan = 0;
+        if (checkCoupan.length > 0) {
+          checkCoupan.forEach((coupan) => {
+            appliedCoupons.push(coupan._id.toString());
+            appliedCoupan += coupan.type === "percentage"
+              ? parseFloat(amountBeforeGenCoupon * (coupan.percent / 100))
+              : parseFloat(coupan.amount ?? 0);
+          });
+        }
+
+        const platformSettings = await collections.settings().findOne(
+          { type: "platformFee" },
+          { session }
+        );
+        const shippingSettings = await collections.settings().findOne(
+          { type: "shippingFee" },
+          { session }
+        );
+
+        const shippingFees = parseFloat(shippingSettings?.value || 0);
+        const platformFees = parseFloat(platformSettings?.value || 0);
+
+        let amountToPay = Math.max(0, amountBeforeGenCoupon - appliedCoupan + shippingFees + platformFees);
+
+        const order = new OrdersModel(
+          null,
+          body.userId,
+          body.products,
+          body.type ?? "pending",
+          false,
+          parseInt(amountToPay),
+          totalDiscountValue,
+          productImage,
+          new Date(),
+          new Date(),
+          body.orderId || "",
+          shippingFees,
+          appliedCoupons,
+          platformFees,
+          totalPrice,
+          "",
+          user.sponsorId.toString(),
+          parseFloat(appliedCoupan + totalCoupanValue),
+          parseFloat(totalTaxValue)
+        );
+
+        const result = await collections.orders().insertOne(order.toDatabaseJson(), { session });
+
+        if (!result || !result.insertedId) {
+          await session.abortTransaction();
+          sessionActive = false;
+          return tryAgain;
+        }
+
+        await session.commitTransaction();
         sessionActive = false;
-        return tryAgain;
+
+        return {
+          ...columnCreated("Order"),
+          data: { id: result.insertedId, orderId: body.orderId }
+        };
+
+      } else {
+        return notFound("products");
       }
 
-      await session.commitTransaction();
-      sessionActive = false;
-
-      return {
-        ...columnCreated("Order"),
-        data: { id: result.insertedId, orderId: body.orderId }
-      };
     } catch (err) {
       console.log(err);
       if (sessionActive) {
@@ -157,10 +192,23 @@ class Order {
     }
   }
 
+
   // Get Order by ID
   async getOrderById(id) {
     try {
       const result = await collections.orders().findOne({ _id: new ObjectId(id) });
+      return result
+        ? { ...fetched("Order"), data: ordersModel.fromJson(result) }
+        : InvalidId("Order Detail");
+    } catch (err) {
+      return { ...serverError, err };
+    }
+  }
+
+  // get order by userId
+  async getOrderByUserId(id) {
+    try {
+      const result = await collections.orders().findOne({ userId: id });
       return result
         ? { ...fetched("Order"), data: ordersModel.fromJson(result) }
         : InvalidId("Order Detail");

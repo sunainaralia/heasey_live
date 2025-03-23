@@ -60,9 +60,6 @@ export const reqFields = {
     // Income Fields
     income: ["userId", "amount", "type", "status"],
 
-    // consultation Fields
-    consul: ["range", "type", "rate"],
-
     // Business Transaction
     bussTransaction: ["amount", "type", "userId"],
 
@@ -80,7 +77,7 @@ export const reqFields = {
     ],
     settings: ["title", "type", "value", "adminId"],
     category: ["title", "icon", "description", "type"],
-    product: ["title", "description", "vendorId", "categoryId", "quantity", "sku"],
+    product: ["title", "description", "vendorId", "categoryId", "quantity", "sku", "price"],
     carousel: [
         "title",
         "path",
@@ -92,7 +89,7 @@ export const reqFields = {
     review: ["review", "productId"],
     order: [
         "userId",
-        "productId"
+        "products"
     ],
     reward: [
         "range", "rule", "type", "title"
