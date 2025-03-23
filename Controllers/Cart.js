@@ -216,7 +216,7 @@ class Cart {
           shippingFee: parseFloat(shippingFees.toFixed(2)),
           platformFee: parseFloat(platformFees.toFixed(2)),
           finalAmount: parseFloat(amountToPay.toFixed(2)),
-          appliedCoupans: [...coupons, ...checkCoupan],
+          appliedCoupans: [...(coupons || []), ...(checkCoupan || [])],
           userName: user.fullName,
           phoneNo: user.phone
         }
