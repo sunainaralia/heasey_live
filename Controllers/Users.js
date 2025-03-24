@@ -195,7 +195,7 @@ class Users {
       const user = new UserModel().fromJson(result);
 
       if (user.attempt <= 0) {
-        return res.status(limitCrossed.status).send(limitCrossed);
+        return limitCrossed;
       }
 
       const isPasswordCorrect = await new Auth().ComparePassword(password, user.password);
@@ -228,7 +228,7 @@ class Users {
         sameSite: 'strict',
       });
       if ((user.level > 0) && (user.sponsorId)) {
-        return res.status(200).send({
+        return {
           status: 200,
           message: "Login successful",
           data: {
@@ -238,9 +238,9 @@ class Users {
             sponsorId: user.sponsorId,
             referalId: user.referralId
           },
-        });
+        };
       } else {
-        return res.status(200).send({
+        return {
           status: 200,
           message: "Login successful",
           data: {
@@ -250,7 +250,7 @@ class Users {
             sponsorId: "",
             referalId: user.referralId
           },
-        });
+        };
       }
 
     } catch (error) {
