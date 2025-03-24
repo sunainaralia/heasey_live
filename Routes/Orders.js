@@ -76,7 +76,7 @@ routes.get(
 );
 // Get Order by userID
 routes.get(
-  "/orders/:id",
+  "/user-orders/:id",
   authController.verifyToken,
   authController.CheckObjectId,
   async (req, res) => {
