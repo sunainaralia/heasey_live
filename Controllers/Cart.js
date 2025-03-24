@@ -2,6 +2,11 @@ import CartModel from "../Models/Cart.js";
 import collections from "../Utils/Collection.js";
 import { ObjectId } from "mongodb";
 import { updateCartFailed, failedToCreate, columnUpdated, serverError, notFound, updateProductQuantity, productRemoved, fetched } from "../Utils/Messages.js";
+import { dirname } from 'path';
+import { readFile } from "../Utils/FileReader.js";
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = dirname(__filename);
+import { fileURLToPath } from 'url';
 class Cart {
   // Add product to the cart
   async addToCart({ userId, products }) {
