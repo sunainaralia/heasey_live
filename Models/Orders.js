@@ -42,9 +42,9 @@ class OrdersModel {
         this.taxValue = taxValue
     }
 
-    fromJson(jsonData) {
+    static fromJson(jsonData) {
         return new OrdersModel(
-            jsonData.id ?? null,
+            jsonData._id ?? null,
             jsonData.userId,
             jsonData.products ?? [],
             jsonData.type,
@@ -65,6 +65,7 @@ class OrdersModel {
             jsonData.taxValue ?? 0
         );
     }
+
 
 
     // Function to convert User instance to a JSON object suitable for database insertion
@@ -121,6 +122,11 @@ class OrdersModel {
         updateJson.updatedAt = new Date();
         return updateJson;
     }
+
+    static fromJsonArray(jsonArray) {
+        return jsonArray.map(order => OrdersModel.fromJson(order));
+    }
+
 
 }
 

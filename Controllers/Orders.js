@@ -207,15 +207,17 @@ class Order {
 
   // get order by userId
   async getOrderByUserId(id) {
+    console.log(id);
     try {
-      const result = await collections.orders().findOne({ userId: id });
-      return result
-        ? { ...fetched("Order"), data: ordersModel.fromJson(result) }
+      const result = await collections.orders().find({ userId: id }).toArray();
+      return result.length
+        ? { ...fetched("Order"), data: OrdersModel.fromJsonArray(result) }
         : InvalidId("Order Detail");
     } catch (err) {
       return { ...serverError, err };
     }
   }
+
 
   // Update Order
   async updateOrderById(body) {
