@@ -229,7 +229,8 @@ class Order {
             productId: product.productId,
             quantity: product.quantity,
             orderId: order._id,
-            status: order.status || 'pending',
+            status: order.status || 'pending'
+
           });
         }
       }
@@ -250,6 +251,10 @@ class Order {
       const fullProductsMap = {};
       for (const doc of productDocs) {
         const fullProduct = new ProductsModel().fromJson(doc);
+        if (fullProduct.images && fullProduct.images.length > 0) {
+          fullProduct.images = fullProduct.images.map((imgPath) => readFile(imgPath) ?? "");
+        }
+
         fullProductsMap[doc._id.toString()] = fullProduct;
       }
       const combinedResults = allOrderProducts.map(orderProduct => {
@@ -271,8 +276,6 @@ class Order {
       return { ...serverError, err };
     }
   }
-
-
 
   // Update Order
   async updateOrderById(body) {
