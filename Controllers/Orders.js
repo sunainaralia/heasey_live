@@ -13,6 +13,7 @@ import OrdersModel from "../Models/Orders.js";
 import collections from "../Utils/Collection.js";
 import { client } from "../Db.js";
 import ProductsModel from "../Models/Products.js";
+import { readFile } from "../Utils/FileReader.js";
 const ordersModel = new OrdersModel();
 
 class Order {
