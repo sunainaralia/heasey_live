@@ -649,18 +649,17 @@ class Users {
       if (!order) return tryAgain;
 
       const amount = order?.amount;
-      const [user, distributions, tdsSetting, convienceSetting, minPurchase] = await Promise.all([
+      const [user, distributions, tdsSetting, convienceSetting] = await Promise.all([
         collections.users().findOne(
           { _id: new ObjectId(order?.userId) },
           { session }
         ),
         collections.distribution().find({ status: true }).sort({ level: 1 }).toArray(),
         collections.settings().findOne({ type: "tds" }),
-        collections.settings().findOne({ type: "convenience" }),
-        collections.settings().findOne({ type: "min-purchase" })
+        collections.settings().findOne({ type: "convenience" })
       ]);
 
-      let gst = 0, convenience = 0, tds = 0, minimumPurchase = parseInt(minPurchase.value) ?? 7000;
+      let gst = 0, convenience = 0, tds = 0
       gst = order?.taxValue;
       const amountAfterGst = amount - gst;
 
@@ -699,7 +698,8 @@ class Users {
       ], { session }).toArray();
 
       if (directReferralPurchases.length > 0 && directReferralPurchases[0].totalAmountSpent) {
-        let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / minimumPurchase);
+        // let newUnlockLevel = Math.floor(directReferralPurchases[0].totalAmountSpent / minimumPurchase);
+        let newUnlockLevel = 16;
         let updatedUnlockLevel = newUnlockLevel > 16 ? 16 : newUnlockLevel;
         let updateUnlock = await collections.users().updateOne(
           { _id: new ObjectId(user._id) },

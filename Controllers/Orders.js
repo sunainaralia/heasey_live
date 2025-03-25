@@ -12,6 +12,7 @@ import {
 import OrdersModel from "../Models/Orders.js";
 import collections from "../Utils/Collection.js";
 import { client } from "../Db.js";
+import ProductsModel from "../Models/Products.js";
 const ordersModel = new OrdersModel();
 
 class Order {
@@ -59,6 +60,7 @@ class Order {
         let totalCoupanValue = 0;
         let appliedCoupons = [];
         let productImage;
+
         for (const products of body.products) {
           const product = await collections.products().findOne(
             { _id: new ObjectId(products.productId) },
@@ -72,9 +74,16 @@ class Order {
           }
 
           productImage = Array.isArray(product.image) && product.image.length > 0 ? product.image[0] : "";
-          let price = product.price * products.quantity;
-          let taxValue = ((product.price * product.tax) / 100) * products.quantity;
-          let discountValue = product.discountValue * products.quantity;
+
+          const quantity = parseInt(products.quantity) || 0;
+          const pricePerUnit = parseFloat(product.price) || 0;
+          const taxRate = parseFloat(product.tax) || 0;
+          const discountValuePerUnit = parseFloat(product.discountValue) || 0;
+          const finalPricePerUnit = parseFloat(product.finalPrice) || 0;
+
+          let price = pricePerUnit * quantity;
+          let taxValue = ((pricePerUnit * taxRate) / 100) * quantity;
+          let discountValue = discountValuePerUnit * quantity;
 
           totalPrice += price;
           totalTaxValue += taxValue;
@@ -89,7 +98,7 @@ class Order {
             coupons.forEach((coupon) => {
               appliedCoupons.push(coupon._id.toString());
               if (parseFloat(coupon.percent) > 0) {
-                amount += (parseFloat(coupon.percent) / 100) * (product.finalPrice * products.quantity);
+                amount += (parseFloat(coupon.percent) / 100) * (finalPricePerUnit * quantity);
               } else {
                 amount += parseFloat(coupon.amount || 0);
               }
@@ -101,22 +110,22 @@ class Order {
 
         const amountBeforeGenCoupon = totalPrice + totalTaxValue - totalDiscountValue - totalCoupanValue;
 
-        const checkCoupan = await collections.coupons()
-          .find({
-            $or: [
-              { productId: null, status: true },
-              { productId: "", status: true }
-            ]
-          }, { session })
-          .toArray();
+        const checkCoupan = await collections.coupons().find({
+          $or: [
+            { productId: null, status: true },
+            { productId: "", status: true }
+          ]
+        }, { session }).toArray();
 
         let appliedCoupan = 0;
         if (checkCoupan.length > 0) {
           checkCoupan.forEach((coupan) => {
             appliedCoupons.push(coupan._id.toString());
-            appliedCoupan += coupan.type === "percentage"
-              ? parseFloat(amountBeforeGenCoupon * (coupan.percent / 100))
-              : parseFloat(coupan.amount ?? 0);
+            if (coupan.type === "percentage") {
+              appliedCoupan += amountBeforeGenCoupon * (parseFloat(coupan.percent) / 100);
+            } else {
+              appliedCoupan += parseFloat(coupan.amount ?? 0);
+            }
           });
         }
 
@@ -140,8 +149,8 @@ class Order {
           body.products,
           body.type ?? "pending",
           false,
-          parseInt(amountToPay),
-          totalDiscountValue,
+          parseFloat(amountToPay),
+          parseFloat(totalDiscountValue),
           productImage,
           new Date(),
           new Date(),
@@ -149,9 +158,9 @@ class Order {
           shippingFees,
           appliedCoupons,
           platformFees,
-          totalPrice,
+          parseFloat(totalPrice),
           "",
-          user.sponsorId.toString(),
+          user.sponsorId?.toString() || "",
           parseFloat(appliedCoupan + totalCoupanValue),
           parseFloat(totalTaxValue)
         );
@@ -171,7 +180,6 @@ class Order {
           ...columnCreated("Order"),
           data: { id: result.insertedId, orderId: body.orderId }
         };
-
       } else {
         return notFound("products");
       }
@@ -193,6 +201,7 @@ class Order {
   }
 
 
+
   // Get Order by ID
   async getOrderById(id) {
     try {
@@ -207,16 +216,62 @@ class Order {
 
   // get order by userId
   async getOrderByUserId(id) {
-    console.log(id);
     try {
-      const result = await collections.orders().find({ userId: id }).toArray();
-      return result.length
-        ? { ...fetched("Order"), data: OrdersModel.fromJsonArray(result) }
-        : InvalidId("Order Detail");
+      const [activeOrders, cancelledOrders] = await Promise.all([
+        collections.orders().find({ userId: id }).toArray(),
+        collections.cancelledOrders().find({ userId: id }).toArray()
+      ]);
+
+      let allOrderProducts = [];
+      for (const order of activeOrders) {
+        for (const product of order.products || []) {
+          allOrderProducts.push({
+            productId: product.productId,
+            quantity: product.quantity,
+            orderId: order._id,
+            status: order.status || 'pending',
+          });
+        }
+      }
+      for (const cancelled of cancelledOrders) {
+        for (const product of cancelled.products || []) {
+          allOrderProducts.push({
+            productId: product.productId,
+            quantity: product.quantity,
+            orderId: cancelled.originalOrderId || cancelled._id,
+            status: 'cancelled',
+          });
+        }
+      }
+      const uniqueProductIds = [...new Set(allOrderProducts.map(p => p.productId))];
+      const productDocs = await collections.products()
+        .find({ _id: { $in: uniqueProductIds.map(id => new ObjectId(id)) } })
+        .toArray();
+      const fullProductsMap = {};
+      for (const doc of productDocs) {
+        const fullProduct = new ProductsModel().fromJson(doc);
+        fullProductsMap[doc._id.toString()] = fullProduct;
+      }
+      const combinedResults = allOrderProducts.map(orderProduct => {
+        const fullProduct = fullProductsMap[orderProduct.productId];
+        return {
+          ...fullProduct,
+          quantityOrdered: orderProduct.quantity,
+          orderId: orderProduct.orderId,
+          status: orderProduct.status
+        };
+      });
+
+      return combinedResults.length
+        ? { ...fetched("products"), data: combinedResults }
+        : InvalidId("User");
+
     } catch (err) {
+      console.log(err);
       return { ...serverError, err };
     }
   }
+
 
 
   // Update Order

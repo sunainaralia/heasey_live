@@ -70,7 +70,8 @@ export const reqFields = {
         "city",
         "state",
         "country",
-        "postalCode",
+        "landmark",
+        "zipcode",
     ],
     admin: [
         "initial", "fullName", "password", "email", "phone", "type"

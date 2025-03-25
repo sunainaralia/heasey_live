@@ -1,42 +1,34 @@
 class CancelledOrdersModel {
   constructor(
     id,
-    originalOrderId,
+    orderId,
     userId,
     products,
-    type,
     amount,
     discount,
-    shippingFee,
-    platformFee,
     price,
     couponAmount,
     taxValue,
     cancellationReason,
-    cancelledBy,
-    cancelledAt,
     image,
     createdAt,
+    updatedAt,
     transactionId,
     sponsorId
   ) {
     this.id = id;
-    this.originalOrderId = originalOrderId; 
+    this.orderId = orderId;
     this.userId = userId;
     this.products = products;
-    this.type = type;
     this.amount = amount;
     this.discount = discount;
-    this.shippingFee = shippingFee;
-    this.platformFee = platformFee;
     this.price = price;
     this.couponAmount = couponAmount;
     this.taxValue = taxValue;
     this.cancellationReason = cancellationReason;
-    this.cancelledBy = cancelledBy; 
-    this.cancelledAt = cancelledAt;
     this.image = image;
     this.createdAt = createdAt;
+    this.updatedAt = updatedAt;
     this.transactionId = transactionId;
     this.sponsorId = sponsorId;
   }
@@ -44,22 +36,18 @@ class CancelledOrdersModel {
   static fromJson(jsonData) {
     return new CancelledOrdersModel(
       jsonData.id ?? null,
-      jsonData.originalOrderId,
+      jsonData.orderId,
       jsonData.userId,
       jsonData.products ?? [],
-      jsonData.type,
       jsonData.amount,
       jsonData.discount,
-      jsonData.shippingFee ?? 0,
-      jsonData.platformFee ?? 0,
       jsonData.price ?? 0,
       jsonData.couponAmount ?? 0,
       jsonData.taxValue ?? 0,
       jsonData.cancellationReason ?? "",
-      jsonData.cancelledBy ?? "user",
-      jsonData.cancelledAt ?? new Date(),
       jsonData.image ?? null,
       jsonData.createdAt ?? new Date(),
+      jsonData.updatedAt ?? new Date(),
       jsonData.transactionId ?? "",
       jsonData.sponsorId ?? ""
     );
@@ -67,22 +55,18 @@ class CancelledOrdersModel {
 
   toDatabaseJson() {
     return {
-      originalOrderId: this.originalOrderId,
+      orderId: this.orderId,
       userId: this.userId,
       products: this.products,
-      type: this.type,
       amount: this.amount,
       discount: this.discount,
-      shippingFee: this.shippingFee,
-      platformFee: this.platformFee,
       price: this.price,
       couponAmount: this.couponAmount,
       taxValue: this.taxValue,
       cancellationReason: this.cancellationReason,
-      cancelledBy: this.cancelledBy,
-      cancelledAt: this.cancelledAt,
       image: this.image,
       createdAt: this.createdAt,
+      updatedAt: this.updatedAt,
       transactionId: this.transactionId,
       sponsorId: this.sponsorId
     };
@@ -107,7 +91,7 @@ class CancelledOrdersModel {
         }
 
         // Date conversion
-        if (key === "cancelledAt" || key === "createdAt") {
+        if (key === "createdAt" || key === "updatedAt") {
           value = new Date(value);
         }
 
