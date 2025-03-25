@@ -22,6 +22,7 @@ import appReviewRoutes from "./Routes/AppReview.js";
 import kycRoutes from "./Routes/Kyc.js";
 import cancelOrderRoutes from "./Routes/CancelOrder.js";
 import addressRoutes from "./Routes/Address.js";
+import incomeRoutes from "./Routes/Incomes.js";
 import path from "path";
 import { fileURLToPath } from "url";
 import { urlNotFound } from "./Utils/Messages.js";
@@ -58,7 +59,9 @@ app.use("/api/v1/", transactionRoutes);
 app.use("/api/v1/", appReviewRoutes);
 app.use("/api/v1/", kycRoutes);
 app.use("/api/v1/", cancelOrderRoutes);
-app.use("/api/v1/", addressRoutes)
+app.use("/api/v1/", addressRoutes);
+app.use("/api/v1/", incomeRoutes);
+
 // handling the error when no routes are found
 app.all("*", (req, res, next) => {
   res.status(404).send(urlNotFound);
