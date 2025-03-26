@@ -207,10 +207,28 @@ class Order {
   async getOrderById(id) {
     try {
       const result = await collections.orders().findOne({ _id: new ObjectId(id) });
-      return result
-        ? { ...fetched("Order"), data: ordersModel.fromJson(result) }
-        : InvalidId("Order Detail");
+
+      if (!result) {
+        return InvalidId("Order Detail");
+      }
+
+      // Enrich products with full product details
+      const enrichedProducts = await Promise.all(
+        (result.products ?? []).map(async (item) => {
+          const productData = await collections.products().findOne({ _id: new ObjectId(item.productId) });
+          return {
+            ...productData,
+            quantity: item.quantity
+          };
+        })
+      );
+
+      const orderData = OrdersModel.fromJson(result);
+      orderData.products = enrichedProducts;
+
+      return { ...fetched("Order"), data: orderData };
     } catch (err) {
+      console.error(err);
       return { ...serverError, err };
     }
   }
@@ -222,7 +240,6 @@ class Order {
         collections.orders().find({ userId: id }).toArray(),
         collections.cancelledOrders().find({ userId: id }).toArray()
       ]);
-
       let allOrderProducts = [];
       for (const order of activeOrders) {
         for (const product of order.products || []) {

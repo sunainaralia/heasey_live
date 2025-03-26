@@ -67,6 +67,7 @@ routes.get(
       const result = await orderController.getOrderById(req.params.id);
       res.status(result.status).send(result);
     } catch (error) {
+      console.log(error)
       return res.status(serverError.status).send({
         ...serverError,
         error,

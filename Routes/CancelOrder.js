@@ -14,7 +14,7 @@ routes.post(
   "/cancel-order",
   upload.none(),
   authController.verifyToken,
-  authController.checkFields(["orderId", "cancellationReason", "productId"]),
+  authController.checkFields(["orderId", "cancellationReason"]),
   async (req, res) => {
     try {
       const result = await orderCancellController.cancelOrder({ ...req.body });
