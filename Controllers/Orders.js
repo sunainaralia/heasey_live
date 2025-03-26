@@ -211,8 +211,6 @@ class Order {
       if (!result) {
         return InvalidId("Order Detail");
       }
-
-      // Enrich products with full product details
       const enrichedProducts = await Promise.all(
         (result.products ?? []).map(async (item) => {
           const productData = await collections.products().findOne({ _id: new ObjectId(item.productId) });
@@ -228,6 +226,12 @@ class Order {
 
       const orderData = OrdersModel.fromJson(result);
       orderData.products = enrichedProducts;
+      const user = await collections.users().findOne({ _id: new ObjectId(orderData.userId) });
+      if(!user){
+        return notFound("User")
+      }
+      orderData.fullName = user?.fullName ?? "";
+      orderData.phone = user?.phone
 
       return { ...fetched("Order"), data: orderData };
     } catch (err) {
