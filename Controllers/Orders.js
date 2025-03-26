@@ -216,6 +216,9 @@ class Order {
       const enrichedProducts = await Promise.all(
         (result.products ?? []).map(async (item) => {
           const productData = await collections.products().findOne({ _id: new ObjectId(item.productId) });
+          if (productData.images && productData.images.length > 0) {
+            productData.images = productData.images.map((imgPath) => readFile(imgPath) ?? "");
+          }
           return {
             ...productData,
             quantity: item.quantity
